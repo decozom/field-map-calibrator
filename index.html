@@ -327,7 +327,13 @@ const pinXY = [
   { x: 0, y: 0 },
   { x: 0, y: 0 },
 ];
-
+// ピン位置を比率でも持つ（リサイズ/スクロールのUI変動でもズレない）
+const pinNorm = [
+  { nx: 0.5, ny: 0.5 }, // P0
+  { nx: 0.5, ny: 0.5 }, // P1
+  { nx: 0.5, ny: 0.5 }, // P2
+  { nx: 0.5, ny: 0.5 }, // P3
+];
 const mapArea = document.getElementById("mapArea");
 const mapImg  = document.getElementById("mapImg");
 const noImg   = document.getElementById("noImg");
