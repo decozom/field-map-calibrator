@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Field Calibrator</title>
+
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    color: #eee;
+    text-align: center;
+    font-family: "JetBrains Mono", "Source Code Pro", monospace;
+  }
+
+  .wrap {
+    padding: 12px 10px 18px;
+  }
+
+  .title {
+    font-size: 18px;
+    margin: 8px 0 4px;
+  }
+  .sub {
+    font-size: 12px;
+    color: #aaa;
+    margin: 0 0 10px;
+    line-height: 1.4;
+  }
+
+  /* ====== 画面いっぱい目に敷き詰める “作業用グリッド” ======
+     ※ここは距離と無関係。見やすさ優先の間隔にする
+  */
+  :root{
+    --gridStep: 28px;  /* ←グリッド間隔（見やすさ優先で調整） */
+    --mapW: min(92vw, 380px);
+    --mapH: min(56vh, 480px); /* UI邪魔しない程度に大きめ */
+  }
+
+  /* マップエリア */
+  #mapArea {
+    width: var(--mapW);
+    height: var(--mapH);
+    margin: 10px auto 10px;
+    position: relative;
+    border: 2px solid #555;
+    background: #222;
+    overflow: hidden;
+    touch-action: none; /* ←ドラッグ時にスクロールしない（超重要） */
+  }
+
+  /* 作業用グリッド（距離無関係） */
+  #grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, #2d2d2d 1px, transparent 1px),
+      linear-gradient(to bottom, #2d2d2d 1px, transparent 1px);
+    background-size: var(--gridStep) var(--gridStep);
+    pointer-events: none;
+  }
+
+  /* 地図画像（中央にいい感じに配置） */
+  #mapImg {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 92%;
+    max-height: 92%;
+    opacity: 0.88;  /* 作業しやすいよう少しだけ透かす */
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none; /* ピン操作を邪魔しない */
+  }
+
+  /* 地図がない時のダミー表示 */
+  #noImg {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #888;
+    font-size: 12px;
+    pointer-events: none;
+  }
+
+  /* ピン共通 */
+  .pin {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(255,255,255,0.8);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.35);
+    touch-action: none;
+  }
+
+  .pinLabel {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #fff;
+    text-shadow: 0 1px 2px #000;
+    user-select: none;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  /* ピン色（見分けるだけ。好きに変えてOK） */
+  .p0 { background: #ff5a5a; } /* 赤 */
+  .p1 { background: #ffd24a; } /* 黄 */
+  .p2 { background: #55d8ff; } /* 水色 */
+  .p3 { background: #7dff7a; } /* 緑 */
+
+  /* 下の情報パネル */
+  #panel {
+    width: min(92vw, 420px);
+    margin: 0 auto;
+    text-align: left;
+    background: #161616;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px 12px;
+    line-height: 1.5;
+    font-size: 12px;
+  }
+
+  #panel .row {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px dashed #2a2a2a;
+    padding: 6px 0;
+  }
+  #panel .row:last-child { border-bottom: none; }
+
+  .k { color: #bbb; min-width: 46px; }
+  .v { color: #cfe8ff; font-variant-numeric: tabular-nums; }
+
+  .hint {
+    color: #aaa;
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 8px 12px;
+    margin: 8px 6px 0;
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="title">Field Calibrator</div>
+  <div class="sub">
+    ピン(P0〜P3)を地図上の同じ地点に合わせる → 下に出るXYをメモ。<br>
+    lat/lonは入力欄なし（コードに直書き運用）。
+  </div>
+
+  <div id="mapArea">
+    <div id="grid"></div>
+    <img id="mapImg" alt="map">
+    <div id="noImg">MAP_IMAGE_URL が空です（仮背景で動作中）</div>
+
+    <!-- ピン4つ -->
+    <div class="pin p0" data-id="0"><div class="pinLabel">P0</div></div>
+    <div class="pin p1" data-id="1"><div class="pinLabel">P1</div></div>
+    <div class="pin p2" data-id="2"><div class="pinLabel">P2</div></div>
+    <div class="pin p3" data-id="3"><div class="pinLabel">P3</div></div>
+  </div>
+
+  <div id="panel"></div>
+
+  <button type="button" id="resetPinsBtn">ピンを中央に戻す</button>
+  <button type="button" id="copyBtn">座標表示をコピー</button>
+
+  <div class="hint">
+    ※ピンXYは「mapArea左上を(0,0)」としたピクセル座標。<br>
+    ※P0〜P3は「左上→右上→右下→左下」に揃えるのが事故らない。
+  </div>
+</div>
+
+<script>
+/* =========================================================
+  ここを編集：地図画像URL（GitHub Pagesなら /map.png みたいに置ける）
+  空("")のままでも動く（仮背景＋グリッド）
+========================================================= */
+const MAP_IMAGE_URL = ""; // 例: "map.png"  or  "https://example.com/map.jpg"
+
+/* =========================================================
+  ここを編集：各ピンに対応する lat/lon を直書き（後で埋める）
+  ※この段階では “未設定” のままでOK
+========================================================= */
+const anchorLatLon = [
+  { lat: null, lon: null }, // P0
+  { lat: null, lon: null }, // P1
+  { lat: null, lon: null }, // P2
+  { lat: null, lon: null }, // P3
+];
+
+/* =========================================================
+  内部状態：ピンのXY（px）
+========================================================= */
+const pinXY = [
+  { x: 0, y: 0 }, // P0
+  { x: 0, y: 0 }, // P1
+  { x: 0, y: 0 }, // P2
+  { x: 0, y: 0 }, // P3
+];
+
+const mapArea = document.getElementById("mapArea");
+const panel = document.getElementById("panel");
+const pins = [...document.querySelectorAll(".pin")];
+
+function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+function setMapImage() {
+  const img = document.getElementById("mapImg");
+  const noImg = document.getElementById("noImg");
+
+  if (MAP_IMAGE_URL && MAP_IMAGE_URL.trim().length > 0) {
+    img.src = MAP_IMAGE_URL;
+    img.style.display = "block";
+    noImg.style.display = "none";
+  } else {
+    img.style.display = "none";
+    noImg.style.display = "grid";
+  }
+}
+
+function centerPins() {
+  const r = mapArea.getBoundingClientRect();
+  const cx = r.width / 2;
+  const cy = r.height / 2;
+
+  // 4点をちょい散らして初期配置（つかみやすい）
+  const offsets = [
+    {dx: -60, dy: -60}, // P0
+    {dx:  60, dy: -60}, // P1
+    {dx:  60, dy:  60}, // P2
+    {dx: -60, dy:  60}, // P3
+  ];
+
+  offsets.forEach((o, i) => {
+    pinXY[i].x = clamp(cx + o.dx, 0, r.width);
+    pinXY[i].y = clamp(cy + o.dy, 0, r.height);
+  });
+
+  renderPins();
+}
+
+function renderPins() {
+  pins.forEach(pin => {
+    const id = Number(pin.dataset.id);
+    pin.style.left = `${pinXY[id].x}px`;
+    pin.style.top  = `${pinXY[id].y}px`;
+  });
+  renderPanel();
+}
+
+function renderPanel() {
+  const lines = [];
+
+  for (let i = 0; i < 4; i++) {
+    const xy = pinXY[i];
+    const ll = anchorLatLon[i];
+
+    const llText =
+      (ll.lat == null || ll.lon == null)
+        ? "lat/lon: (未設定)"
+        : `lat:${ll.lat}, lon:${ll.lon}`;
+
+    lines.push(`
+      <div class="row">
+        <div class="k">P${i}</div>
+        <div class="v">x:${xy.x.toFixed(1)}  y:${xy.y.toFixed(1)}</div>
+        <div class="k">${llText}</div>
+      </div>
+    `);
+  }
+
+  panel.innerHTML = lines.join("");
+}
+
+/* =========================================================
+  ドラッグ処理（iPhone対応：pointer events）
+========================================================= */
+let draggingId = null;
+
+function pointerToLocalXY(e) {
+  const r = mapArea.getBoundingClientRect();
+  const x = e.clientX - r.left;
+  const y = e.clientY - r.top;
+  return { x: clamp(x, 0, r.width), y: clamp(y, 0, r.height) };
+}
+
+pins.forEach(pin => {
+  pin.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    pin.setPointerCapture(e.pointerId);
+    draggingId = Number(pin.dataset.id);
+  });
+
+  pin.addEventListener("pointermove", (e) => {
+    if (draggingId === null) return;
+    const {x, y} = pointerToLocalXY(e);
+    pinXY[draggingId].x = x;
+    pinXY[draggingId].y = y;
+    renderPins();
+  });
+
+  pin.addEventListener("pointerup", (e) => {
+    draggingId = null;
+    try { pin.releasePointerCapture(e.pointerId); } catch {}
+  });
+
+  pin.addEventListener("pointercancel", () => {
+    draggingId = null;
+  });
+});
+
+/* =========================================================
+  ボタン
+========================================================= */
+document.getElementById("resetPinsBtn").addEventListener("click", centerPins);
+
+document.getElementById("copyBtn").addEventListener("click", async () => {
+  const text = pinXY.map((p, i) => `P${i}: x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)}`).join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("コピーした:\n\n" + text);
+  } catch {
+    // clipboardがダメな場合（iOSである）
+    prompt("コピーして:", text);
+  }
+});
+
+/* =========================================================
+  初期化
+========================================================= */
+setMapImage();
+centerPins();
+window.addEventListener("resize", () => {
+  // 画面回転などで位置関係が崩れると辛いので、リサイズ時は中央に戻す
+  centerPins();
+});
+</script>
+</body>
+</html>
