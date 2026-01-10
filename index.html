@@ -14,14 +14,8 @@
     font-family: "JetBrains Mono", "Source Code Pro", monospace;
   }
 
-  .wrap {
-    padding: 12px 10px 18px;
-  }
-
-  .title {
-    font-size: 18px;
-    margin: 8px 0 4px;
-  }
+  .wrap { padding: 12px 10px 18px; }
+  .title { font-size: 18px; margin: 8px 0 4px; }
   .sub {
     font-size: 12px;
     color: #aaa;
@@ -29,18 +23,16 @@
     line-height: 1.4;
   }
 
-  /* ====== 画面いっぱい目に敷き詰める “作業用グリッド” ======
-     ※ここは距離と無関係。見やすさ優先の間隔にする
-  */
+  /* ====== 作業用グリッド（距離無関係：見やすさ優先） ====== */
   :root{
-    --gridStep: 28px;  /* ←グリッド間隔（見やすさ優先で調整） */
+    --gridStep: 28px;
     --mapW: min(92vw, 380px);
-    --mapH: min(56vh, 480px); /* UI邪魔しない程度に大きめ */
-    
-    --imgScale: 0.5; /*画像サイズ*/
+    --mapH: min(56vh, 480px);
+
+    --imgScale: 1.00; /* JSで変更される（+/-） */
   }
 
-  /* マップエリア */
+  /* ====== マップエリア ====== */
   #mapArea {
     width: var(--mapW);
     height: var(--mapH);
@@ -49,10 +41,9 @@
     border: 2px solid #555;
     background: #222;
     overflow: hidden;
-    touch-action: none; /* ←ドラッグ時にスクロールしない（超重要） */
+    touch-action: none; /* ピン操作中にスクロールしない */
   }
 
-  /* 作業用グリッド（距離無関係） */
   #grid {
     position: absolute;
     inset: 0;
@@ -63,26 +54,25 @@
     pointer-events: none;
   }
 
-  /* 地図画像（中央にいい感じに配置） */
-　#mapImg {
-   position: absolute;
-   left: 50%;
-   top: 50%;
-   transform: translate(-50%, -50%) scale(var(--imgScale));
-   transform-origin: center center;
+  /* ====== 地図画像（中央配置＋倍率で拡大縮小） ====== */
+  #mapImg {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(var(--imgScale));
+    transform-origin: center center;
 
-　  max-width: none;
-   max-height: none;
-   width: auto;
-   height: auto;
+    max-width: none;
+    max-height: none;
+    width: auto;
+    height: auto;
 
-   opacity: 0.88;
-   user-select: none;
-   -webkit-user-drag: none;
-   pointer-events: none;
-　}
+    opacity: 0.88;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+  }
 
-  /* 地図がない時のダミー表示 */
   #noImg {
     position: absolute;
     inset: 0;
@@ -93,7 +83,7 @@
     pointer-events: none;
   }
 
-  /* ピン共通 */
+  /* ====== ピン ====== */
   .pin {
     position: absolute;
     width: 18px;
@@ -118,15 +108,14 @@
     white-space: nowrap;
   }
 
-  /* ピン色（見分けるだけ。好きに変えてOK） */
-  .p0 { background: #ff5a5a; } /* 赤 */
-  .p1 { background: #ffd24a; } /* 黄 */
-  .p2 { background: #55d8ff; } /* 水色 */
-  .p3 { background: #7dff7a; } /* 緑 */
+  .p0 { background: #ff5a5a; }
+  .p1 { background: #ffd24a; }
+  .p2 { background: #55d8ff; }
+  .p3 { background: #7dff7a; }
 
-  /* 下の情報パネル */
+  /* ====== 情報パネル ====== */
   #panel {
-    width: min(92vw, 420px);
+    width: min(92vw, 460px);
     margin: 0 auto;
     text-align: left;
     background: #161616;
@@ -148,18 +137,36 @@
   #panel .row:last-child { border-bottom: none; }
 
   .k { color: #bbb; min-width: 46px; }
-  .v { color: #cfe8ff; font-variant-numeric: tabular-nums; }
+  .v { color: #cfe8ff; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-  .hint {
-    color: #aaa;
-    margin-top: 8px;
-    font-size: 12px;
+  .hint { color: #aaa; margin-top: 8px; font-size: 12px; }
+
+  /* ====== コントロール ====== */
+  .controls {
+    width: min(92vw, 460px);
+    margin: 8px auto 10px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   button {
     font-size: 14px;
     padding: 8px 12px;
-    margin: 8px 6px 0;
+    margin: 0;
+  }
+
+  .badge {
+    font-size: 12px;
+    color: #ddd;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 </style>
 </head>
@@ -168,43 +175,51 @@
 <div class="wrap">
   <div class="title">Field Calibrator</div>
   <div class="sub">
-    ピン(P0〜P3)を地図上の同じ地点に合わせる → 下に出るXYをメモ。<br>
-    lat/lonは入力欄なし（コードに直書き運用）。
+    ピン(P0〜P3)を地図上の同じ地点に合わせる → 下のXYをメモ。<br>
+    画像は「− / ＋」で拡大縮小。scaleと表示サイズ(px)を表示＆コピーできます。
   </div>
 
   <div id="mapArea">
     <div id="grid"></div>
     <img id="mapImg" alt="map">
-    <div id="noImg">MAP_IMAGE_URL が空です（仮背景で動作中）</div>
+    <div id="noImg">画像が未設定です（仮背景で動作中）</div>
 
-    <!-- ピン4つ -->
     <div class="pin p0" data-id="0"><div class="pinLabel">P0</div></div>
     <div class="pin p1" data-id="1"><div class="pinLabel">P1</div></div>
     <div class="pin p2" data-id="2"><div class="pinLabel">P2</div></div>
     <div class="pin p3" data-id="3"><div class="pinLabel">P3</div></div>
   </div>
 
+  <!-- 画像サイズ調整UI -->
+  <div class="controls">
+    <button type="button" id="imgMinus">画像 −</button>
+    <button type="button" id="imgPlus">画像 ＋</button>
+    <button type="button" id="imgReset">画像リセット</button>
+    <span class="badge" id="imgInfo">scale:1.00 / size:----×----</span>
+    <button type="button" id="copyImgInfo">画像情報コピー</button>
+  </div>
+
   <div id="panel"></div>
 
-  <button type="button" id="resetPinsBtn">ピンを中央に戻す</button>
-  <button type="button" id="copyBtn">座標表示をコピー</button>
+  <div class="controls">
+    <button type="button" id="resetPinsBtn">ピンを中央に戻す</button>
+    <button type="button" id="copyPinsBtn">ピンXYをコピー</button>
+  </div>
 
   <div class="hint">
     ※ピンXYは「mapArea左上を(0,0)」としたピクセル座標。<br>
-    ※P0〜P3は「左上→右上→右下→左下」に揃えるのが事故らない。
+    ※P0〜P3は「左上→右上→右下→左下」に揃えると事故らない。
   </div>
 </div>
 
 <script>
 /* =========================================================
-  ここを編集：地図画像URL（GitHub Pagesなら /map.png みたいに置ける）
-  空("")のままでも動く（仮背景＋グリッド）
+  地図画像（あなたの画像ファイル名をセット済み）
 ========================================================= */
-const MAP_IMAGE_URL = " B587C687-7002-42DA-A4F2-A7C82E111540.jpeg "; // 例: "map.png"  or  "https://example.com/map.jpg"
+const MAP_IMAGE_URL = "B587C687-7002-42DA-A4F2-A7C82E111540.jpeg";
 
 /* =========================================================
-  ここを編集：各ピンに対応する lat/lon を直書き（後で埋める）
-  ※この段階では “未設定” のままでOK
+  lat/lonは“直書き”運用（ここは今は未設定でOK）
 ========================================================= */
 const anchorLatLon = [
   { lat: null, lon: null }, // P0
@@ -214,7 +229,17 @@ const anchorLatLon = [
 ];
 
 /* =========================================================
-  内部状態：ピンのXY（px）
+  画像スケール（+/-で変更）
+========================================================= */
+const DEFAULT_IMG_SCALE = 1.00;   // 初期倍率（あとで固定したいならここを変える）
+let imgScale = DEFAULT_IMG_SCALE;
+
+const SCALE_STEP = 0.05;          // 1回の増減幅
+const SCALE_MIN  = 0.30;
+const SCALE_MAX  = 3.00;
+
+/* =========================================================
+  ピンXY（px）
 ========================================================= */
 const pinXY = [
   { x: 0, y: 0 }, // P0
@@ -224,31 +249,64 @@ const pinXY = [
 ];
 
 const mapArea = document.getElementById("mapArea");
-const panel = document.getElementById("panel");
-const pins = [...document.querySelectorAll(".pin")];
+const mapImg  = document.getElementById("mapImg");
+const noImg   = document.getElementById("noImg");
+const panel   = document.getElementById("panel");
+const pins    = [...document.querySelectorAll(".pin")];
+const imgInfo = document.getElementById("imgInfo");
 
 function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 
+/* ===== 画像読み込み＆表示 ===== */
 function setMapImage() {
-  const img = document.getElementById("mapImg");
-  const noImg = document.getElementById("noImg");
-
   if (MAP_IMAGE_URL && MAP_IMAGE_URL.trim().length > 0) {
-    img.src = MAP_IMAGE_URL;
-    img.style.display = "block";
+    mapImg.src = MAP_IMAGE_URL;
+    mapImg.style.display = "block";
     noImg.style.display = "none";
   } else {
-    img.style.display = "none";
+    mapImg.style.display = "none";
     noImg.style.display = "grid";
   }
 }
 
+/* ===== スケール適用（CSS変数に反映） ===== */
+function applyScale() {
+  document.documentElement.style.setProperty("--imgScale", imgScale.toFixed(2));
+  updateImgInfoSoon(); // 描画反映後に情報更新
+}
+
+/* ===== 画像サイズ表示（実際に画面に表示されてるpxを出す） ===== */
+let infoTimer = null;
+function updateImgInfoSoon(){
+  if (infoTimer) clearTimeout(infoTimer);
+  infoTimer = setTimeout(updateImgInfo, 60);
+}
+
+function updateImgInfo(){
+  // 画像がまだ読めてない場合
+  if (!mapImg.complete || mapImg.naturalWidth === 0) {
+    imgInfo.textContent = `scale:${imgScale.toFixed(2)} / size:----×----`;
+    return;
+  }
+
+  // transform(=scale)込みの「画面上の実サイズ」は getBoundingClientRect が確実
+  const r = mapImg.getBoundingClientRect();
+  const w = Math.round(r.width);
+  const h = Math.round(r.height);
+
+  // 元画像サイズも欲しければここで取れる
+  // const nw = mapImg.naturalWidth;
+  // const nh = mapImg.naturalHeight;
+
+  imgInfo.textContent = `scale:${imgScale.toFixed(2)} / size:${w}×${h}px`;
+}
+
+/* ===== ピン初期配置 ===== */
 function centerPins() {
   const r = mapArea.getBoundingClientRect();
   const cx = r.width / 2;
   const cy = r.height / 2;
 
-  // 4点をちょい散らして初期配置（つかみやすい）
   const offsets = [
     {dx: -60, dy: -60}, // P0
     {dx:  60, dy: -60}, // P1
@@ -279,7 +337,6 @@ function renderPanel() {
   for (let i = 0; i < 4; i++) {
     const xy = pinXY[i];
     const ll = anchorLatLon[i];
-
     const llText =
       (ll.lat == null || ll.lon == null)
         ? "lat/lon: (未設定)"
@@ -297,9 +354,7 @@ function renderPanel() {
   panel.innerHTML = lines.join("");
 }
 
-/* =========================================================
-  ドラッグ処理（iPhone対応：pointer events）
-========================================================= */
+/* ===== ピンのドラッグ（iPhone対応：pointer events） ===== */
 let draggingId = null;
 
 function pointerToLocalXY(e) {
@@ -334,29 +389,61 @@ pins.forEach(pin => {
   });
 });
 
-/* =========================================================
-  ボタン
-========================================================= */
-document.getElementById("resetPinsBtn").addEventListener("click", centerPins);
-
-document.getElementById("copyBtn").addEventListener("click", async () => {
-  const text = pinXY.map((p, i) => `P${i}: x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)}`).join("\n");
+/* ===== コピーユーティリティ ===== */
+async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);
     alert("コピーした:\n\n" + text);
   } catch {
-    // clipboardがダメな場合（iOSである）
     prompt("コピーして:", text);
   }
+}
+
+/* ===== ボタン：画像拡大縮小 ===== */
+document.getElementById("imgMinus").addEventListener("click", () => {
+  imgScale = clamp(imgScale - SCALE_STEP, SCALE_MIN, SCALE_MAX);
+  applyScale();
 });
 
-/* =========================================================
-  初期化
-========================================================= */
+document.getElementById("imgPlus").addEventListener("click", () => {
+  imgScale = clamp(imgScale + SCALE_STEP, SCALE_MIN, SCALE_MAX);
+  applyScale();
+});
+
+document.getElementById("imgReset").addEventListener("click", () => {
+  imgScale = DEFAULT_IMG_SCALE;
+  applyScale();
+});
+
+/* 画像情報コピー（scaleとサイズをそのまま貼れる形に） */
+document.getElementById("copyImgInfo").addEventListener("click", () => {
+  const text = imgInfo.textContent
+    + `\nMAP_IMAGE_URL="${MAP_IMAGE_URL}"\nDEFAULT_IMG_SCALE=${imgScale.toFixed(2)}`;
+  copyText(text);
+});
+
+/* ===== ボタン：ピン操作 ===== */
+document.getElementById("resetPinsBtn").addEventListener("click", centerPins);
+
+document.getElementById("copyPinsBtn").addEventListener("click", () => {
+  const text = pinXY.map((p, i) => `P${i}: x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)}`).join("\n");
+  copyText(text);
+});
+
+/* ===== 初期化 ===== */
 setMapImage();
+applyScale();
 centerPins();
+
+/* 画像読み込み完了時にサイズ表示を更新 */
+mapImg.addEventListener("load", () => {
+  updateImgInfoSoon();
+});
+
+/* 画面回転などでmapAreaサイズが変わったら、表示情報更新 */
 window.addEventListener("resize", () => {
-  // 画面回転などで位置関係が崩れると辛いので、リサイズ時は中央に戻す
+  updateImgInfoSoon();
+  // ピンの位置もズレるので、ここは安全に中央へ戻す（事故防止）
   centerPins();
 });
 </script>
