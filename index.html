@@ -402,11 +402,25 @@ function centerPins() {
 }
 
 function renderPins() {
+  const r = mapArea.getBoundingClientRect();
+  const w = Math.max(1, r.width);
+  const h = Math.max(1, r.height);
+
+  // clampしつつ、比率も更新
+  for (let i = 0; i < 4; i++) {
+    pinXY[i].x = clamp(pinXY[i].x, 0, w);
+    pinXY[i].y = clamp(pinXY[i].y, 0, h);
+
+    pinNorm[i].nx = pinXY[i].x / w;
+    pinNorm[i].ny = pinXY[i].y / h;
+  }
+
   pins.forEach(pin => {
     const id = Number(pin.dataset.id);
     pin.style.left = `${pinXY[id].x}px`;
     pin.style.top  = `${pinXY[id].y}px`;
   });
+
   renderPanel();
 }
 
