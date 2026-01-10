@@ -606,8 +606,24 @@ mapImg.addEventListener("load", () => {
 });
 
 window.addEventListener("resize", () => {
+  // スクロールやアドレスバー表示/非表示でresizeが起きても、
+  // ピンをリセットしない（比率から復元するだけ）
   updateImgInfoSoon();
-  centerPins(); // 事故防止
+
+  const r = mapArea.getBoundingClientRect();
+  const w = Math.max(1, r.width);
+  const h = Math.max(1, r.height);
+
+  for (let i = 0; i < 4; i++) {
+    pinXY[i].x = clamp(pinNorm[i].nx * w, 0, w);
+    pinXY[i].y = clamp(pinNorm[i].ny * h, 0, h);
+  }
+  // 見た目更新（リセットではない）
+  pins.forEach(pin => {
+    const id = Number(pin.dataset.id);
+    pin.style.left = `${pinXY[id].x}px`;
+    pin.style.top  = `${pinXY[id].y}px`;
+  });
 });
 </script>
 </body>
