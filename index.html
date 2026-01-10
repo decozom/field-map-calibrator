@@ -36,6 +36,8 @@
     --gridStep: 28px;  /* ←グリッド間隔（見やすさ優先で調整） */
     --mapW: min(92vw, 380px);
     --mapH: min(56vh, 480px); /* UI邪魔しない程度に大きめ */
+    
+    --imgScale: 1.00; /*画像サイズ*/
   }
 
   /* マップエリア */
@@ -62,18 +64,23 @@
   }
 
   /* 地図画像（中央にいい感じに配置） */
-  #mapImg {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    max-width: 92%;
-    max-height: 92%;
-    opacity: 0.88;  /* 作業しやすいよう少しだけ透かす */
-    user-select: none;
-    -webkit-user-drag: none;
-    pointer-events: none; /* ピン操作を邪魔しない */
-  }
+　#mapImg {
+   position: absolute;
+   left: 50%;
+   top: 50%;
+   transform: translate(-50%, -50%) scale(var(--imgScale));
+   transform-origin: center center;
+
+　  max-width: none;
+   max-height: none;
+   width: auto;
+   height: auto;
+
+   opacity: 0.88;
+   user-select: none;
+   -webkit-user-drag: none;
+   pointer-events: none;
+　}
 
   /* 地図がない時のダミー表示 */
   #noImg {
