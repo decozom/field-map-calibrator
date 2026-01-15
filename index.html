@@ -1,213 +1,207 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Field Calibrator</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Field Calibrator (Timer-aligned)</title>
 
 <style>
-  body {
-    margin: 0;
-    background: #111;
-    color: #eee;
-    text-align: center;
-    font-family: "JetBrains Mono", "Source Code Pro", monospace;
+  body{
+    margin:0;
+    background:#111;
+    color:#eee;
+    text-align:center;
+    font-family:"JetBrains Mono","Source Code Pro",monospace;
   }
 
-  .wrap { padding: 12px 10px 18px; }
-  .title { font-size: 18px; margin: 8px 0 4px; }
-  .sub {
-    font-size: 12px;
-    color: #aaa;
-    margin: 0 0 10px;
-    line-height: 1.4;
+  .wrap{ padding:12px 10px 18px; }
+  .title{ font-size:18px; margin:8px 0 4px; }
+  .sub{
+    font-size:12px;
+    color:#aaa;
+    margin:0 0 10px;
+    line-height:1.45;
   }
 
-  :root{
-    --gridStep: 28px;
-    --mapW: min(92vw, 380px);
-    --mapH: min(56vh, 480px);
-    --imgScale: 1.00;
+  /* ===== Timer と同じマップ枠（正方形） ===== */
+  #map{
+    width:min(96vw,420px);
+    height:min(96vw,420px);
+    margin:6px auto 10px;
+    background:#222;
+    border:2px solid #555;
+    position:relative;
+    overflow:hidden;
+    touch-action:none;
   }
 
-  #mapArea {
-    width: var(--mapW);
-    height: var(--mapH);
-    margin: 10px auto 10px;
-    position: relative;
-    border: 2px solid #555;
-    background: #222;
-    overflow: hidden;
-    touch-action: none;
-  }
-
-  #grid {
-    position: absolute;
-    inset: 0;
+  /* ===== Timer と同じグリッド（線） ===== */
+  .grid{
+    position:absolute;
+    inset:0;
+    background-size:30px 30px;
     background-image:
-      linear-gradient(to right, #2d2d2d 1px, transparent 1px),
-      linear-gradient(to bottom, #2d2d2d 1px, transparent 1px);
-    background-size: var(--gridStep) var(--gridStep);
-    pointer-events: none;
+      linear-gradient(to right, rgba(0,220,255,0.75) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0,220,255,0.75) 1px, transparent 1px);
+    pointer-events:none;
+    z-index:3;
   }
 
-  #mapImg {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%) scale(var(--imgScale));
-    transform-origin: center center;
+  /* ===== Timer と同じグリッドラベル ===== */
+  #gridLabels{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:7;
+    color:rgba(0,220,255,0.95);
+    font-size:12px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    text-shadow:0 0 2px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8);
+  }
+  .grid-x,.grid-y{ position:absolute; background:none; padding:0; border-radius:0; }
+  .grid-x{ transform:translateX(-50%); }
+  .grid-y{ transform:translateY(-50%); }
 
-    max-width: none;
-    max-height: none;
-    width: auto;
-    height: auto;
-
-    opacity: 0.88;
-    user-select: none;
-    -webkit-user-drag: none;
-    pointer-events: none;
+  /* ===== Timer と同じ mapImg（中心固定 + scale） ===== */
+  :root{ --imgScale: 1.00; }
+  #mapImg{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%) scale(var(--imgScale, 1));
+    transform-origin:center center;
+    max-width:none;
+    max-height:none;
+    width:auto;
+    height:auto;
+    opacity:0.88;
+    user-select:none;
+    -webkit-user-drag:none;
+    pointer-events:none;
+    z-index:1;
   }
 
-  #noImg {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    color: #888;
-    font-size: 12px;
-    pointer-events: none;
+  #noImg{
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    color:#888;
+    font-size:12px;
+    pointer-events:none;
+    z-index:2;
   }
 
-  .pin {
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    border: 2px solid rgba(255,255,255,0.8);
-    box-shadow: 0 0 0 2px rgba(0,0,0,0.35);
-    touch-action: none;
+  /* ===== ピン ===== */
+  .pin{
+    position:absolute;
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    border:2px solid rgba(255,255,255,0.8);
+    box-shadow:0 0 0 2px rgba(0,0,0,0.35);
+    touch-action:none;
+    z-index:6;
   }
-
-  .pinLabel {
-    position: absolute;
-    top: -18px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 11px;
-    color: #fff;
-    text-shadow: 0 1px 2px #000;
-    user-select: none;
-    pointer-events: none;
-    white-space: nowrap;
+  .pinLabel{
+    position:absolute;
+    top:-18px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:11px;
+    color:#fff;
+    text-shadow:0 1px 2px #000;
+    user-select:none;
+    pointer-events:none;
+    white-space:nowrap;
   }
+  .p0{ background:#ff5a5a; }
+  .p1{ background:#ffd24a; }
+  .p2{ background:#55d8ff; }
+  .p3{ background:#7dff7a; }
 
-  .p0 { background: #ff5a5a; }
-  .p1 { background: #ffd24a; }
-  .p2 { background: #55d8ff; }
-  .p3 { background: #7dff7a; }
-
-  .controls {
-    width: min(92vw, 460px);
-    margin: 8px auto 10px;
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
+  /* ===== 操作UI ===== */
+  .controls{
+    width:min(92vw,460px);
+    margin:8px auto 10px;
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
   }
-
-  button {
-    font-size: 14px;
-    padding: 8px 12px;
-    margin: 0;
-  }
-
-  .badge {
-    font-size: 12px;
-    color: #ddd;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 999px;
-    padding: 6px 10px;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-
-  #panel {
-    width: min(92vw, 460px);
-    margin: 0 auto 10px;
-    text-align: left;
-    background: #161616;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 10px 12px;
-    line-height: 1.5;
-    font-size: 12px;
-  }
-
-  #panel .row {
-    display: flex;
-    gap: 10px;
-    justify-content: space-between;
-    align-items: baseline;
-    border-bottom: 1px dashed #2a2a2a;
-    padding: 6px 0;
-  }
-  #panel .row:last-child { border-bottom: none; }
-
-  .k { color: #bbb; min-width: 46px; }
-  .v { color: #cfe8ff; font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-  /* ====== 座標入力UI ====== */
-  #coordBox{
-    width: min(92vw, 460px);
-    margin: 0 auto;
-    text-align: left;
-    background: #161616;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 12px;
-  }
-  .coordTitle{
+  button{ font-size:14px; padding:8px 12px; margin:0; }
+  .badge{
+    font-size:12px;
     color:#ddd;
-    margin: 0 0 8px;
-    font-size: 13px;
+    background:#1a1a1a;
+    border:1px solid #333;
+    border-radius:999px;
+    padding:6px 10px;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
   }
+
+  #panel{
+    width:min(92vw,460px);
+    margin:0 auto 10px;
+    text-align:left;
+    background:#161616;
+    border:1px solid #333;
+    border-radius:8px;
+    padding:10px 12px;
+    line-height:1.5;
+    font-size:12px;
+  }
+  #panel .row{
+    display:flex;
+    gap:10px;
+    justify-content:space-between;
+    align-items:baseline;
+    border-bottom:1px dashed #2a2a2a;
+    padding:6px 0;
+  }
+  #panel .row:last-child{ border-bottom:none; }
+  .k{ color:#bbb; min-width:46px; }
+  .v{ color:#cfe8ff; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  /* ===== lat/lon 入力 ===== */
+  #coordBox{
+    width:min(92vw,460px);
+    margin:0 auto;
+    text-align:left;
+    background:#161616;
+    border:1px solid #333;
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:12px;
+  }
+  .coordTitle{ color:#ddd; margin:0 0 8px; font-size:13px; }
   .coordRow{
     display:flex;
     align-items:center;
     gap:10px;
-    padding: 6px 0;
-    border-bottom: 1px dashed #2a2a2a;
+    padding:6px 0;
+    border-bottom:1px dashed #2a2a2a;
   }
   .coordRow:last-child{ border-bottom:none; }
-
-  .tag{
-    width: 34px;
-    color:#bbb;
-    font-variant-numeric: tabular-nums;
-  }
-
+  .tag{ width:34px; color:#bbb; font-variant-numeric:tabular-nums; }
   .coordRow input{
-    width: 46%;
-    min-width: 120px;
+    width:46%;
+    min-width:120px;
     background:#0f0f0f;
     color:#eee;
     border:1px solid #333;
     border-radius:6px;
-    padding: 8px 10px;
-    font-size: 13px;
-    font-family: inherit;
-    font-variant-numeric: tabular-nums;
+    padding:8px 10px;
+    font-size:13px;
+    font-family:inherit;
+    font-variant-numeric:tabular-nums;
   }
-  .coordRow input::placeholder{
-    color:#666;
-  }
-
-  .hint { color: #aaa; margin-top: 8px; font-size: 12px; }
+  .coordRow input::placeholder{ color:#666; }
+  .hint{ color:#aaa; margin-top:8px; font-size:12px; }
 </style>
 </head>
 
@@ -215,14 +209,15 @@
 <div class="wrap">
   <div class="title">Field Calibrator</div>
   <div class="sub">
-    ピン(P0〜P3)を地図上の同じ地点に合わせる → XYとlat/lonを揃える。<br>
-    画像は「− / ＋」で拡大縮小。lat/lonはページ上で入力できます（自動保存）。
+    タイマーと同じマップ枠＆グリッド＆ラベル。<br>
+    ピン(P0〜P3)を合わせて lat/lon を入れる → JSONを一括コピー。
   </div>
 
-  <div id="mapArea">
-    <div id="grid"></div>
-    <img id="mapImg" alt="map">
-    <div id="noImg">画像が未設定です（仮背景で動作中）</div>
+  <div id="map">
+    <div class="grid"></div>
+    <div id="gridLabels"></div>
+    <img id="mapImg" alt="map" />
+    <div id="noImg">画像が未設定です（MAP_IMAGE_URL を設定してね）</div>
 
     <div class="pin p0" data-id="0"><div class="pinLabel">P0</div></div>
     <div class="pin p1" data-id="1"><div class="pinLabel">P1</div></div>
@@ -230,7 +225,6 @@
     <div class="pin p3" data-id="3"><div class="pinLabel">P3</div></div>
   </div>
 
-  <!-- 画像サイズ調整UI -->
   <div class="controls">
     <button type="button" id="imgMinus">画像 −</button>
     <button type="button" id="imgPlus">画像 ＋</button>
@@ -239,10 +233,8 @@
     <button type="button" id="copyImgInfo">画像情報コピー</button>
   </div>
 
-  <!-- ピンXY表示 -->
   <div id="panel"></div>
 
-  <!-- ★ lat/lon 入力欄 -->
   <div id="coordBox">
     <div class="coordTitle">座標入力（lat / lon）</div>
 
@@ -273,11 +265,12 @@
     <div class="controls" style="margin:10px 0 0; justify-content:flex-start;">
       <button type="button" id="copyAnchorsBtn">lat/lonをコピー</button>
       <button type="button" id="clearAnchorsBtn">lat/lon消去</button>
+      <button type="button" id="copyFieldJsonBtn">Field JSONをコピー</button>
     </div>
 
     <div class="hint">
-      ※ lat=緯度 / lon=経度。Googleマップで同じ地点を長押し→表示された数値をコピペすると楽。<br>
-      ※ 入力した値は端末に自動保存されます（同じ端末・同じブラウザで有効）。
+      ※ 入力は自動保存（同じ端末・同じブラウザで有効）。<br>
+      ※ JSONの image は <b>mapImg.src からファイル名を抜いて</b> 自動で入れる（assets/xxxx.ext）。
     </div>
   </div>
 
@@ -289,18 +282,15 @@
 
 <script>
 /* =========================================================
-  地図画像（あなたのファイル名）
+  設定（とりあえず自動生成前提：最低限ここだけ）
 ========================================================= */
-const MAP_IMAGE_URL = "B587C687-7002-42DA-A4F2-A7C82E111540.jpeg";
+const MAP_IMAGE_URL = "assets/oasis.jpg";  // ←画像ファイルをここに
+const DEFAULT_IMG_SCALE = 0.35;           // ←Timer側 defaultImgScale と同じ値を入れる想定
 
-/* =========================================================
-  永続化キー（リポジトリ毎に衝突しないよう名前付け）
-========================================================= */
-const STORAGE_KEY = "field_calibrator_anchor_latlon_v1";
+/* 永続化キー */
+const STORAGE_KEY = "field_calibrator_timer_aligned_v1";
 
-/* =========================================================
-  anchors（入力欄と同期される）
-========================================================= */
+/* anchors（入力欄と同期） */
 const anchorLatLon = [
   { lat: null, lon: null }, // P0
   { lat: null, lon: null }, // P1
@@ -308,33 +298,27 @@ const anchorLatLon = [
   { lat: null, lon: null }, // P3
 ];
 
-/* =========================================================
-  画像スケール（+/-で変更）
-========================================================= */
-const DEFAULT_IMG_SCALE = 1.00;
+/* スケール */
 let imgScale = DEFAULT_IMG_SCALE;
-
 const SCALE_STEP = 0.05;
-const SCALE_MIN  = 0.30;
+const SCALE_MIN  = 0.10;
 const SCALE_MAX  = 3.00;
 
-/* =========================================================
-  ピンXY（px）
-========================================================= */
+/* ピン（px + 比率） */
 const pinXY = [
   { x: 0, y: 0 },
   { x: 0, y: 0 },
   { x: 0, y: 0 },
   { x: 0, y: 0 },
 ];
-// ピン位置を比率でも持つ（リサイズ/スクロールのUI変動でもズレない）
 const pinNorm = [
-  { nx: 0.5, ny: 0.5 }, // P0
-  { nx: 0.5, ny: 0.5 }, // P1
-  { nx: 0.5, ny: 0.5 }, // P2
-  { nx: 0.5, ny: 0.5 }, // P3
+  { nx: 0.5, ny: 0.5 },
+  { nx: 0.5, ny: 0.5 },
+  { nx: 0.5, ny: 0.5 },
+  { nx: 0.5, ny: 0.5 },
 ];
-const mapArea = document.getElementById("mapArea");
+
+const mapEl   = document.getElementById("map");
 const mapImg  = document.getElementById("mapImg");
 const noImg   = document.getElementById("noImg");
 const panel   = document.getElementById("panel");
@@ -346,9 +330,59 @@ const lonInputs = [0,1,2,3].map(i => document.getElementById(`lon${i}`));
 
 function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 
-/* ===== 画像読み込み＆表示 ===== */
-function setMapImage() {
-  if (MAP_IMAGE_URL && MAP_IMAGE_URL.trim().length > 0) {
+/* ===== Timer同様：グリッドラベル生成 ===== */
+function buildGridLabels(step = 30){
+  const box = document.getElementById("gridLabels");
+  if (!box) return;
+  box.innerHTML = "";
+
+  const w = mapEl.clientWidth;
+  const h = mapEl.clientHeight;
+
+  const cols = Math.floor(w / step);
+  const rows = Math.floor(h / step);
+
+  for (let col = 1; col < cols; col++){
+    const d = document.createElement("div");
+    d.className = "grid-x";
+    d.style.left = `${col * step + step / 2}px`;
+    d.style.top  = `${step * 0.25}px`;
+    d.textContent = String.fromCharCode(65 + (col - 1));
+    box.appendChild(d);
+  }
+
+  for (let row = 1; row < rows; row++){
+    const d = document.createElement("div");
+    d.className = "grid-y";
+    d.style.left = `${step * 0.25}px`;
+    d.style.top  = `${row * step + step / 2}px`;
+    d.textContent = row;
+    box.appendChild(d);
+  }
+}
+
+/* ===== mapImg.src からファイル名抜き ===== */
+function getFilenameFromSrc(src){
+  try{
+    const u = new URL(src, location.href);
+    const name = (u.pathname.split("/").pop() || "");
+    return decodeURIComponent(name);
+  }catch{
+    const s = (src || "").split("?")[0].split("#")[0];
+    return (s.split("/").pop() || "");
+  }
+}
+function baseNameNoExt(filename){
+  const f = (filename || "").trim();
+  if (!f) return "field";
+  const dot = f.lastIndexOf(".");
+  const base = (dot > 0) ? f.slice(0, dot) : f;
+  return base.replace(/\s+/g, "_").replace(/[^\w\-]/g, "_") || "field";
+}
+
+/* ===== 画像表示 ===== */
+function setMapImage(){
+  if (MAP_IMAGE_URL && MAP_IMAGE_URL.trim()){
     mapImg.src = MAP_IMAGE_URL;
     mapImg.style.display = "block";
     noImg.style.display = "none";
@@ -359,20 +393,19 @@ function setMapImage() {
 }
 
 /* ===== スケール適用 ===== */
-function applyScale() {
+function applyScale(){
   document.documentElement.style.setProperty("--imgScale", imgScale.toFixed(2));
   updateImgInfoSoon();
 }
 
-/* ===== 画像サイズ表示（表示中px） ===== */
+/* ===== 画像サイズ情報 ===== */
 let infoTimer = null;
 function updateImgInfoSoon(){
   if (infoTimer) clearTimeout(infoTimer);
   infoTimer = setTimeout(updateImgInfo, 60);
 }
-
 function updateImgInfo(){
-  if (!mapImg.complete || mapImg.naturalWidth === 0) {
+  if (!mapImg.complete || mapImg.naturalWidth === 0){
     imgInfo.textContent = `scale:${imgScale.toFixed(2)} / size:----×----`;
     return;
   }
@@ -381,36 +414,34 @@ function updateImgInfo(){
 }
 
 /* ===== ピン初期配置 ===== */
-function centerPins() {
-  const r = mapArea.getBoundingClientRect();
-  const cx = r.width / 2;
-  const cy = r.height / 2;
+function centerPins(){
+  const w = mapEl.clientWidth;
+  const h = mapEl.clientHeight;
+  const cx = w / 2;
+  const cy = h / 2;
 
   const offsets = [
-    {dx: -60, dy: -60},
-    {dx:  60, dy: -60},
-    {dx:  60, dy:  60},
-    {dx: -60, dy:  60},
+    {dx:-60, dy:-60},
+    {dx: 60, dy:-60},
+    {dx: 60, dy: 60},
+    {dx:-60, dy: 60},
   ];
 
   offsets.forEach((o, i) => {
-    pinXY[i].x = clamp(cx + o.dx, 0, r.width);
-    pinXY[i].y = clamp(cy + o.dy, 0, r.height);
+    pinXY[i].x = clamp(cx + o.dx, 0, w);
+    pinXY[i].y = clamp(cy + o.dy, 0, h);
   });
 
   renderPins();
 }
 
-function renderPins() {
-  const r = mapArea.getBoundingClientRect();
-  const w = Math.max(1, r.width);
-  const h = Math.max(1, r.height);
+function renderPins(){
+  const w = Math.max(1, mapEl.clientWidth);
+  const h = Math.max(1, mapEl.clientHeight);
 
-  // clampしつつ、比率も更新
-  for (let i = 0; i < 4; i++) {
+  for (let i=0;i<4;i++){
     pinXY[i].x = clamp(pinXY[i].x, 0, w);
     pinXY[i].y = clamp(pinXY[i].y, 0, h);
-
     pinNorm[i].nx = pinXY[i].x / w;
     pinNorm[i].ny = pinXY[i].y / h;
   }
@@ -424,9 +455,9 @@ function renderPins() {
   renderPanel();
 }
 
-function renderPanel() {
+function renderPanel(){
   const lines = [];
-  for (let i = 0; i < 4; i++) {
+  for (let i=0;i<4;i++){
     const xy = pinXY[i];
     const ll = anchorLatLon[i];
     const llText =
@@ -445,11 +476,10 @@ function renderPanel() {
   panel.innerHTML = lines.join("");
 }
 
-/* ===== ピンのドラッグ ===== */
+/* ===== ドラッグ ===== */
 let draggingId = null;
-
-function pointerToLocalXY(e) {
-  const r = mapArea.getBoundingClientRect();
+function pointerToLocalXY(e){
+  const r = mapEl.getBoundingClientRect();
   const x = e.clientX - r.left;
   const y = e.clientY - r.top;
   return { x: clamp(x, 0, r.width), y: clamp(y, 0, r.height) };
@@ -472,7 +502,7 @@ pins.forEach(pin => {
 
   pin.addEventListener("pointerup", (e) => {
     draggingId = null;
-    try { pin.releasePointerCapture(e.pointerId); } catch {}
+    try{ pin.releasePointerCapture(e.pointerId); }catch{}
   });
 
   pin.addEventListener("pointercancel", () => {
@@ -481,11 +511,11 @@ pins.forEach(pin => {
 });
 
 /* ===== コピー ===== */
-async function copyText(text) {
-  try {
+async function copyText(text){
+  try{
     await navigator.clipboard.writeText(text);
     alert("コピーした:\n\n" + text);
-  } catch {
+  }catch{
     prompt("コピーして:", text);
   }
 }
@@ -494,57 +524,76 @@ async function copyText(text) {
 function parseMaybeNumber(str){
   const s = (str ?? "").toString().trim();
   if (s === "") return null;
-  // 全角対策（。や，が混じると死ぬ）
   const normalized = s.replace(/，/g, ",").replace(/。/g, ".");
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
-
 function saveAnchors(){
-  const data = anchorLatLon.map(a => ({
-    lat: a.lat,
-    lon: a.lon
-  }));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(anchorLatLon));
 }
-
 function loadAnchors(){
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return;
   try{
     const data = JSON.parse(raw);
     if (!Array.isArray(data) || data.length !== 4) return;
-    for(let i=0;i<4;i++){
-      const lat = (typeof data[i].lat === "number") ? data[i].lat : null;
-      const lon = (typeof data[i].lon === "number") ? data[i].lon : null;
-      anchorLatLon[i].lat = lat;
-      anchorLatLon[i].lon = lon;
+    for (let i=0;i<4;i++){
+      anchorLatLon[i].lat = (typeof data[i].lat === "number") ? data[i].lat : null;
+      anchorLatLon[i].lon = (typeof data[i].lon === "number") ? data[i].lon : null;
     }
   }catch{}
 }
-
 function syncAnchorsToInputs(){
-  for(let i=0;i<4;i++){
+  for (let i=0;i<4;i++){
     latInputs[i].value = anchorLatLon[i].lat == null ? "" : anchorLatLon[i].lat.toFixed(6);
     lonInputs[i].value = anchorLatLon[i].lon == null ? "" : anchorLatLon[i].lon.toFixed(6);
   }
 }
-
 function onAnchorInputChanged(i){
-  const lat = parseMaybeNumber(latInputs[i].value);
-  const lon = parseMaybeNumber(lonInputs[i].value);
-
-  anchorLatLon[i].lat = lat;
-  anchorLatLon[i].lon = lon;
-
+  anchorLatLon[i].lat = parseMaybeNumber(latInputs[i].value);
+  anchorLatLon[i].lon = parseMaybeNumber(lonInputs[i].value);
   saveAnchors();
   renderPanel();
 }
-
 latInputs.forEach((inp, i) => inp.addEventListener("input", () => onAnchorInputChanged(i)));
 lonInputs.forEach((inp, i) => inp.addEventListener("input", () => onAnchorInputChanged(i)));
 
-/* ===== ボタン：画像拡大縮小 ===== */
+/* ===== JSON自動生成 ===== */
+function buildFieldJson(){
+  const filename = getFilenameFromSrc(mapImg.src || MAP_IMAGE_URL || "");
+  const base = baseNameNoExt(filename);
+
+  const imagePath = filename ? `assets/${filename}` : "assets/your_image.jpg";
+
+  const anchors = [0,1,2,3].map(i => ({
+    label: `P${i}`,
+    x: Number(pinXY[i].x.toFixed(1)),
+    y: Number(pinXY[i].y.toFixed(1)),
+    lat: anchorLatLon[i].lat,
+    lon: anchorLatLon[i].lon
+  }));
+
+  return {
+    id: base,
+    name: base,
+    image: imagePath,
+    defaultImgScale: Number(imgScale.toFixed(2)),
+    anchors
+  };
+}
+
+function validateFieldJson(obj){
+  const missing = obj.anchors
+    .map((a,i) => (a.lat == null || a.lon == null) ? `P${i}` : null)
+    .filter(Boolean);
+
+  if (missing.length){
+    return `lat/lon 未設定: ${missing.join(", ")}\n（JSONは出せるけど、Timerで位置が出ない）`;
+  }
+  return null;
+}
+
+/* ===== ボタン類 ===== */
 document.getElementById("imgMinus").addEventListener("click", () => {
   imgScale = clamp(imgScale - SCALE_STEP, SCALE_MIN, SCALE_MAX);
   applyScale();
@@ -558,15 +607,14 @@ document.getElementById("imgReset").addEventListener("click", () => {
   applyScale();
 });
 
-/* 画像情報コピー */
 document.getElementById("copyImgInfo").addEventListener("click", () => {
-  const text = imgInfo.textContent
-    + `\nMAP_IMAGE_URL="${MAP_IMAGE_URL}"`
-    + `\nDEFAULT_IMG_SCALE=${imgScale.toFixed(2)}`;
+  const text =
+    imgInfo.textContent
+    + `\nmapImg.src="${mapImg.src || MAP_IMAGE_URL}"`
+    + `\ndefaultImgScale=${imgScale.toFixed(2)}`;
   copyText(text);
 });
 
-/* lat/lon コピー＆消去 */
 document.getElementById("copyAnchorsBtn").addEventListener("click", () => {
   const text = anchorLatLon.map((a,i) => {
     const lat = a.lat == null ? "null" : a.lat.toFixed(6);
@@ -577,7 +625,7 @@ document.getElementById("copyAnchorsBtn").addEventListener("click", () => {
 });
 
 document.getElementById("clearAnchorsBtn").addEventListener("click", () => {
-  for(let i=0;i<4;i++){
+  for (let i=0;i<4;i++){
     anchorLatLon[i].lat = null;
     anchorLatLon[i].lon = null;
   }
@@ -586,12 +634,39 @@ document.getElementById("clearAnchorsBtn").addEventListener("click", () => {
   renderPanel();
 });
 
-/* ===== ボタン：ピン操作 ===== */
+document.getElementById("copyFieldJsonBtn").addEventListener("click", () => {
+  const obj = buildFieldJson();
+  const warn = validateFieldJson(obj);
+  const jsonText = JSON.stringify(obj, null, 2);
+
+  if (warn){
+    const ok = confirm(warn + "\n\nそれでもJSONをコピーする？");
+    if (!ok) return;
+  }
+  copyText(jsonText);
+});
+
 document.getElementById("resetPinsBtn").addEventListener("click", centerPins);
 document.getElementById("copyPinsBtn").addEventListener("click", () => {
-  const text = pinXY.map((p, i) => `P${i}: x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)}`).join("\n");
+  const text = pinXY.map((p,i) => `P${i}: x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)}`).join("\n");
   copyText(text);
 });
+
+/* ===== リサイズ対策（ピンを比率から復元） ===== */
+function restorePinsFromNorm(){
+  const w = Math.max(1, mapEl.clientWidth);
+  const h = Math.max(1, mapEl.clientHeight);
+  for (let i=0;i<4;i++){
+    pinXY[i].x = clamp(pinNorm[i].nx * w, 0, w);
+    pinXY[i].y = clamp(pinNorm[i].ny * h, 0, h);
+  }
+  pins.forEach(pin => {
+    const id = Number(pin.dataset.id);
+    pin.style.left = `${pinXY[id].x}px`;
+    pin.style.top  = `${pinXY[id].y}px`;
+  });
+  renderPanel();
+}
 
 /* ===== 初期化 ===== */
 loadAnchors();
@@ -601,30 +676,15 @@ setMapImage();
 applyScale();
 centerPins();
 
-mapImg.addEventListener("load", () => {
-  updateImgInfoSoon();
-});
+mapImg.addEventListener("load", () => updateImgInfoSoon());
 
 window.addEventListener("resize", () => {
-  // スクロールやアドレスバー表示/非表示でresizeが起きても、
-  // ピンをリセットしない（比率から復元するだけ）
+  buildGridLabels(30);
   updateImgInfoSoon();
-
-  const r = mapArea.getBoundingClientRect();
-  const w = Math.max(1, r.width);
-  const h = Math.max(1, r.height);
-
-  for (let i = 0; i < 4; i++) {
-    pinXY[i].x = clamp(pinNorm[i].nx * w, 0, w);
-    pinXY[i].y = clamp(pinNorm[i].ny * h, 0, h);
-  }
-  // 見た目更新（リセットではない）
-  pins.forEach(pin => {
-    const id = Number(pin.dataset.id);
-    pin.style.left = `${pinXY[id].x}px`;
-    pin.style.top  = `${pinXY[id].y}px`;
-  });
+  restorePinsFromNorm();
 });
+
+requestAnimationFrame(() => buildGridLabels(30));
 </script>
 </body>
 </html>
