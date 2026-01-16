@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>Field Calibrator (Timer-aligned)</title>
+<title>Field Calibrator</title>
 
 <style>
   body{
@@ -14,62 +14,72 @@
     font-family:"JetBrains Mono","Source Code Pro",monospace;
   }
 
-  .wrap{ padding:12px 10px 18px; }
-  .title{ font-size:18px; margin:8px 0 4px; }
+  .wrap{ padding: 10px 10px 18px; }
+  .titleRow{
+    width: min(92vw, 460px);
+    margin: 8px auto 6px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .title{ font-size:18px; margin:0; text-align:left; }
   .sub{
+    width: min(92vw, 460px);
+    margin: 0 auto 10px;
     font-size:12px;
     color:#aaa;
-    margin:0 0 10px;
     line-height:1.45;
+    text-align:left;
   }
 
-  /* ===== Timer と同じマップ枠（正方形） ===== */
-  #map{
-    width:min(96vw,420px);
-    height:min(96vw,420px);
-    margin:6px auto 10px;
-    background:#222;
-    border:2px solid #555;
-    position:relative;
-    overflow:hidden;
-    touch-action:none;
+  /* ===== Timer同様のマップ枠 ===== */
+  #mapArea{
+    width: min(96vw, 420px);
+    height: min(96vw, 420px);
+    margin: 8px auto 10px;
+    position: relative;
+    border: 2px solid #555;
+    background: #222;
+    overflow: hidden;
+    touch-action: none;
   }
 
-  /* ===== Timer と同じグリッド（線） ===== */
+  /* グリッド（Timer寄せ） */
   .grid{
     position:absolute;
     inset:0;
-    background-size:30px 30px;
+    background-size: 30px 30px;
     background-image:
-      linear-gradient(to right, rgba(0,220,255,0.75) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0,220,255,0.75) 1px, transparent 1px);
+      linear-gradient(to right, rgba(0,220,255,0.35) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0,220,255,0.35) 1px, transparent 1px);
     pointer-events:none;
     z-index:3;
   }
 
-  /* ===== Timer と同じグリッドラベル ===== */
+  /* グリッドラベル（Timer寄せ） */
   #gridLabels{
     position:absolute;
     inset:0;
     pointer-events:none;
     z-index:7;
-    color:rgba(0,220,255,0.95);
-    font-size:12px;
-    font-weight:700;
-    font-variant-numeric:tabular-nums;
-    text-shadow:0 0 2px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8);
+    color: rgba(0,220,255,0.95);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 2px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8);
   }
-  .grid-x,.grid-y{ position:absolute; background:none; padding:0; border-radius:0; }
-  .grid-x{ transform:translateX(-50%); }
-  .grid-y{ transform:translateY(-50%); }
+  .grid-x, .grid-y{ position:absolute; background:none; padding:0; border-radius:0; }
+  .grid-x{ transform: translateX(-50%); }
+  .grid-y{ transform: translateY(-50%); }
 
-  /* ===== Timer と同じ mapImg（中心固定 + scale） ===== */
+  /* マップ画像（Timerと同じセンター基準） */
   :root{ --imgScale: 1.00; }
   #mapImg{
     position:absolute;
     left:50%;
     top:50%;
-    transform:translate(-50%,-50%) scale(var(--imgScale, 1));
+    transform: translate(-50%, -50%) scale(var(--imgScale));
     transform-origin:center center;
     max-width:none;
     max-height:none;
@@ -93,26 +103,26 @@
     z-index:2;
   }
 
-  /* ===== ピン ===== */
+  /* ピン */
   .pin{
     position:absolute;
     width:18px;
     height:18px;
     border-radius:50%;
-    transform:translate(-50%,-50%);
+    transform: translate(-50%, -50%);
     border:2px solid rgba(255,255,255,0.8);
-    box-shadow:0 0 0 2px rgba(0,0,0,0.35);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.35);
     touch-action:none;
-    z-index:6;
+    z-index:9;
   }
   .pinLabel{
     position:absolute;
     top:-18px;
     left:50%;
-    transform:translateX(-50%);
+    transform: translateX(-50%);
     font-size:11px;
     color:#fff;
-    text-shadow:0 1px 2px #000;
+    text-shadow: 0 1px 2px #000;
     user-select:none;
     pointer-events:none;
     white-space:nowrap;
@@ -122,17 +132,21 @@
   .p2{ background:#55d8ff; }
   .p3{ background:#7dff7a; }
 
-  /* ===== 操作UI ===== */
+  /* 操作系 */
   .controls{
     width:min(92vw,460px);
-    margin:8px auto 10px;
+    margin: 8px auto 10px;
     display:flex;
     gap:8px;
     justify-content:center;
     align-items:center;
     flex-wrap:wrap;
   }
-  button{ font-size:14px; padding:8px 12px; margin:0; }
+  button{
+    font-size:14px;
+    padding:8px 12px;
+    margin:0;
+  }
   .badge{
     font-size:12px;
     color:#ddd;
@@ -140,11 +154,11 @@
     border:1px solid #333;
     border-radius:999px;
     padding:6px 10px;
-    font-variant-numeric:tabular-nums;
+    font-variant-numeric: tabular-nums;
     white-space:nowrap;
   }
 
-  #panel{
+  #panel, #coordBox, #exportBox{
     width:min(92vw,460px);
     margin:0 auto 10px;
     text-align:left;
@@ -155,6 +169,7 @@
     line-height:1.5;
     font-size:12px;
   }
+
   #panel .row{
     display:flex;
     gap:10px;
@@ -165,19 +180,9 @@
   }
   #panel .row:last-child{ border-bottom:none; }
   .k{ color:#bbb; min-width:46px; }
-  .v{ color:#cfe8ff; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .v{ color:#cfe8ff; font-variant-numeric: tabular-nums; white-space:nowrap; }
 
-  /* ===== lat/lon 入力 ===== */
-  #coordBox{
-    width:min(92vw,460px);
-    margin:0 auto;
-    text-align:left;
-    background:#161616;
-    border:1px solid #333;
-    border-radius:8px;
-    padding:10px 12px;
-    font-size:12px;
-  }
+  /* lat/lon 入力 */
   .coordTitle{ color:#ddd; margin:0 0 8px; font-size:13px; }
   .coordRow{
     display:flex;
@@ -187,7 +192,7 @@
     border-bottom:1px dashed #2a2a2a;
   }
   .coordRow:last-child{ border-bottom:none; }
-  .tag{ width:34px; color:#bbb; font-variant-numeric:tabular-nums; }
+  .tag{ width:34px; color:#bbb; font-variant-numeric: tabular-nums; }
   .coordRow input{
     width:46%;
     min-width:120px;
@@ -198,26 +203,186 @@
     padding:8px 10px;
     font-size:13px;
     font-family:inherit;
-    font-variant-numeric:tabular-nums;
+    font-variant-numeric: tabular-nums;
   }
   .coordRow input::placeholder{ color:#666; }
   .hint{ color:#aaa; margin-top:8px; font-size:12px; }
+
+  /* 右上の画像アイコンボタン（空欄に置く想定） */
+  .iconBtn{
+    width:44px;
+    height:44px;
+    border-radius:14px;
+    border:2px solid rgba(0,220,255,0.35);
+    background: rgba(255,255,255,0.04);
+    color: rgba(0,220,255,0.95);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .iconBtn:active{ transform: scale(0.97); }
+  .iconBtn svg{ width:24px; height:24px; display:block; fill: currentColor; }
+
+  /* ===== 画像選択モーダル ===== */
+  #imgPickerModal{
+    position:fixed;
+    inset:0;
+    display:none;
+    background: rgba(0,0,0,0.55);
+    z-index:1000;
+    padding: 10px;
+  }
+  #imgPickerSheet{
+    width: min(94vw, 520px);
+    max-height: min(86vh, 720px);
+    margin: 8px auto;
+    background:#121212;
+    border:1px solid #333;
+    border-radius:14px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .modalHead{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 10px;
+    border-bottom:1px solid #262626;
+    background:#0f0f0f;
+  }
+  .modalTitle{
+    font-size:13px;
+    color:#ddd;
+    text-align:left;
+    flex:1;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  #imgPickerBack{
+    width:44px;
+    height:32px;
+    border-radius:10px;
+    border:1px solid #333;
+    background:#1a1a1a;
+    color:#eee;
+    font-size:18px;
+    line-height:1;
+    text-align:center;
+  }
+  #imgPickerBack:active{ transform: scale(0.97); }
+  #imgPickerClose{
+    width:44px;
+    height:32px;
+    border-radius:10px;
+    border:1px solid #333;
+    background:#1a1a1a;
+    color:#eee;
+    font-size:18px;
+    line-height:1;
+  }
+  #imgPickerClose:active{ transform: scale(0.97); }
+
+  #imgPickerBody{
+    padding:10px;
+    overflow:auto;
+  }
+  .imgItem{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 10px;
+    border:1px solid #2a2a2a;
+    background:#151515;
+    border-radius:12px;
+    margin-bottom:10px;
+  }
+  .imgName{
+    text-align:left;
+    font-size:13px;
+    color:#e8f7ff;
+    word-break:break-all;
+  }
+  .imgUseBtn{
+    padding:8px 12px;
+    font-size:13px;
+  }
+  .warn{
+    color:#ffb3b3;
+    font-size:12px;
+    line-height:1.4;
+    background:#1a0f10;
+    border:1px solid #3a1f22;
+    border-radius:10px;
+    padding:10px 12px;
+  }
+
+  /* Export */
+  #exportBox .row2{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  #fieldIdInput{
+    width: 180px;
+    background:#0f0f0f;
+    color:#eee;
+    border:1px solid #333;
+    border-radius:6px;
+    padding:8px 10px;
+    font-size:13px;
+    font-family:inherit;
+  }
+  #exportPreview{
+    margin-top:10px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    color:#cfe8ff;
+    background:#0f0f0f;
+    border:1px solid #333;
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:12px;
+    line-height:1.45;
+    max-height: 220px;
+    overflow:auto;
+  }
 </style>
 </head>
 
 <body>
 <div class="wrap">
-  <div class="title">Field Calibrator</div>
-  <div class="sub">
-    タイマーと同じマップ枠＆グリッド＆ラベル。<br>
-    ピン(P0〜P3)を合わせて lat/lon を入れる → JSONを一括コピー。
+
+  <div class="titleRow">
+    <div style="display:flex; flex-direction:column; gap:2px;">
+      <div class="title">Field Calibrator</div>
+      <div style="font-size:12px; color:#8cf; text-align:left;" id="currentImageLabel">image: (none)</div>
+    </div>
+
+    <!-- 右上：画像アイコン（押しやすい） -->
+    <button class="iconBtn" id="openImgPickerBtn" type="button" aria-label="画像を選択">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 11.5 11 14l2.5-3 3.5 4.5H6l2.5-4z"></path>
+      </svg>
+    </button>
   </div>
 
-  <div id="map">
+  <div class="sub">
+    ピン(P0〜P3)を地図上の同じ地点に合わせる → XYとlat/lonを揃える。<br />
+    画像は「− / ＋」で拡大縮小。lat/lonはページ上で入力（自動保存）。
+  </div>
+
+  <div id="mapArea">
     <div class="grid"></div>
     <div id="gridLabels"></div>
+
     <img id="mapImg" alt="map" />
-    <div id="noImg">画像が未設定です（MAP_IMAGE_URL を設定してね）</div>
+    <div id="noImg">右上の画像アイコンから maps の画像を選んでね</div>
 
     <div class="pin p0" data-id="0"><div class="pinLabel">P0</div></div>
     <div class="pin p1" data-id="1"><div class="pinLabel">P1</div></div>
@@ -225,6 +390,7 @@
     <div class="pin p3" data-id="3"><div class="pinLabel">P3</div></div>
   </div>
 
+  <!-- 画像サイズ調整 -->
   <div class="controls">
     <button type="button" id="imgMinus">画像 −</button>
     <button type="button" id="imgPlus">画像 ＋</button>
@@ -233,8 +399,10 @@
     <button type="button" id="copyImgInfo">画像情報コピー</button>
   </div>
 
+  <!-- ピンXY表示 -->
   <div id="panel"></div>
 
+  <!-- lat/lon 入力 -->
   <div id="coordBox">
     <div class="coordTitle">座標入力（lat / lon）</div>
 
@@ -243,19 +411,16 @@
       <input id="lat0" inputmode="decimal" placeholder="lat (例 35.123456)" />
       <input id="lon0" inputmode="decimal" placeholder="lon (例 139.123456)" />
     </div>
-
     <div class="coordRow">
       <div class="tag">P1</div>
       <input id="lat1" inputmode="decimal" placeholder="lat" />
       <input id="lon1" inputmode="decimal" placeholder="lon" />
     </div>
-
     <div class="coordRow">
       <div class="tag">P2</div>
       <input id="lat2" inputmode="decimal" placeholder="lat" />
       <input id="lon2" inputmode="decimal" placeholder="lon" />
     </div>
-
     <div class="coordRow">
       <div class="tag">P3</div>
       <input id="lat3" inputmode="decimal" placeholder="lat" />
@@ -265,12 +430,11 @@
     <div class="controls" style="margin:10px 0 0; justify-content:flex-start;">
       <button type="button" id="copyAnchorsBtn">lat/lonをコピー</button>
       <button type="button" id="clearAnchorsBtn">lat/lon消去</button>
-      <button type="button" id="copyFieldJsonBtn">Field JSONをコピー</button>
     </div>
 
     <div class="hint">
-      ※ 入力は自動保存（同じ端末・同じブラウザで有効）。<br>
-      ※ JSONの image は <b>mapImg.src からファイル名を抜いて</b> 自動で入れる（assets/xxxx.ext）。
+      ※ lat=緯度 / lon=経度。Googleマップで同じ地点を長押し→表示された数値をコピペすると楽。<br />
+      ※ 入力した値は端末に自動保存（同じ端末・同じブラウザで有効）。
     </div>
   </div>
 
@@ -278,39 +442,107 @@
     <button type="button" id="resetPinsBtn">ピンを中央に戻す</button>
     <button type="button" id="copyPinsBtn">ピンXYをコピー</button>
   </div>
+
+  <!-- ✅ 一発コピー（Field JSON） -->
+  <div id="exportBox">
+    <div class="row2">
+      <span class="k">field id</span>
+      <input id="fieldIdInput" placeholder="例: oasis" />
+      <button type="button" id="buildJsonBtn">JSON生成</button>
+      <button type="button" id="copyJsonBtn">JSON一括コピー</button>
+    </div>
+    <div class="hint" style="margin-top:8px;">
+      ※ image は「maps/選択したファイル名」を自動で入れる（mapImg.srcから抽出）。<br />
+      ※ defaultImgScale は今の scale を入れる（初期は1.00、±で変更可）。
+    </div>
+    <div id="exportPreview">(まだ生成してない)</div>
+  </div>
+
+</div>
+
+<!-- ===== 画像選択モーダル ===== -->
+<div id="imgPickerModal" aria-hidden="true">
+  <div id="imgPickerSheet" role="dialog" aria-modal="true">
+    <div class="modalHead">
+      <button id="imgPickerBack" type="button" aria-label="戻る">←</button>
+      <div class="modalTitle">maps / 画像を選択</div>
+      <button id="imgPickerClose" type="button" aria-label="閉じる">×</button>
+    </div>
+    <div id="imgPickerBody">
+      <div class="warn">
+        maps/manifest.json が必要です。<br />
+        例）["oasis.jpg","forest.png"]<br />
+        ※ GitHub Pagesはフォルダ一覧を直接取得できないので、manifest方式が安定。
+      </div>
+      <div style="height:10px;"></div>
+      <div id="imgPickerList"></div>
+    </div>
+  </div>
 </div>
 
 <script>
 /* =========================================================
-  設定（とりあえず自動生成前提：最低限ここだけ）
+  設定
 ========================================================= */
-const MAP_IMAGE_URL = "assets/oasis.jpg";  // ←画像ファイルをここに
-const DEFAULT_IMG_SCALE = 0.35;           // ←Timer側 defaultImgScale と同じ値を入れる想定
+// ✅ maps フォルダと manifest を使う
+const MAPS_DIR = "maps/";
+const MANIFEST_URL = MAPS_DIR + "manifest.json";
 
-/* 永続化キー */
-const STORAGE_KEY = "field_calibrator_timer_aligned_v1";
+// 永続化キー
+const STORAGE_KEY = "field_calibrator_anchor_latlon_v2";
+const STORAGE_IMG_KEY = "field_calibrator_selected_image_v1";
+const STORAGE_SCALE_KEY = "field_calibrator_img_scale_v1";
+const STORAGE_PINS_KEY = "field_calibrator_pins_norm_v1";
 
-/* anchors（入力欄と同期） */
-const anchorLatLon = [
-  { lat: null, lon: null }, // P0
-  { lat: null, lon: null }, // P1
-  { lat: null, lon: null }, // P2
-  { lat: null, lon: null }, // P3
-];
-
-/* スケール */
+// 画像スケール（初期1倍）
+const DEFAULT_IMG_SCALE = 1.00;
 let imgScale = DEFAULT_IMG_SCALE;
 const SCALE_STEP = 0.05;
-const SCALE_MIN  = 0.10;
+const SCALE_MIN  = 0.30;
 const SCALE_MAX  = 3.00;
 
-/* ピン（px + 比率） */
+/* =========================================================
+  DOM
+========================================================= */
+const mapArea = document.getElementById("mapArea");
+const mapImg  = document.getElementById("mapImg");
+const noImg   = document.getElementById("noImg");
+const panel   = document.getElementById("panel");
+const pins    = [...document.querySelectorAll(".pin")];
+const imgInfo = document.getElementById("imgInfo");
+const currentImageLabel = document.getElementById("currentImageLabel");
+
+const imgPickerModal = document.getElementById("imgPickerModal");
+const imgPickerList  = document.getElementById("imgPickerList");
+const openImgPickerBtn = document.getElementById("openImgPickerBtn");
+const imgPickerBack  = document.getElementById("imgPickerBack");
+const imgPickerClose = document.getElementById("imgPickerClose");
+
+const latInputs = [0,1,2,3].map(i => document.getElementById(`lat${i}`));
+const lonInputs = [0,1,2,3].map(i => document.getElementById(`lon${i}`));
+
+const fieldIdInput = document.getElementById("fieldIdInput");
+const exportPreview = document.getElementById("exportPreview");
+const buildJsonBtn = document.getElementById("buildJsonBtn");
+const copyJsonBtn = document.getElementById("copyJsonBtn");
+
+/* =========================================================
+  状態
+========================================================= */
+const anchorLatLon = [
+  { lat: null, lon: null },
+  { lat: null, lon: null },
+  { lat: null, lon: null },
+  { lat: null, lon: null },
+];
+
 const pinXY = [
   { x: 0, y: 0 },
   { x: 0, y: 0 },
   { x: 0, y: 0 },
   { x: 0, y: 0 },
 ];
+
 const pinNorm = [
   { nx: 0.5, ny: 0.5 },
   { nx: 0.5, ny: 0.5 },
@@ -318,40 +550,84 @@ const pinNorm = [
   { nx: 0.5, ny: 0.5 },
 ];
 
-const mapEl   = document.getElementById("map");
-const mapImg  = document.getElementById("mapImg");
-const noImg   = document.getElementById("noImg");
-const panel   = document.getElementById("panel");
-const pins    = [...document.querySelectorAll(".pin")];
-const imgInfo = document.getElementById("imgInfo");
+let selectedImageFile = ""; // "oasis.jpg"
+let lastExportJsonText = "";
 
-const latInputs = [0,1,2,3].map(i => document.getElementById(`lat${i}`));
-const lonInputs = [0,1,2,3].map(i => document.getElementById(`lon${i}`));
-
+/* =========================================================
+  Utils
+========================================================= */
 function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 
-/* ===== Timer同様：グリッドラベル生成 ===== */
-function buildGridLabels(step = 30){
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("コピーした:\n\n" + text);
+  } catch {
+    prompt("コピーして:", text);
+  }
+}
+
+function basenameFromUrl(url){
+  try{
+    const u = new URL(url, location.href);
+    const p = u.pathname.split("/").filter(Boolean);
+    return p.length ? p[p.length - 1] : "";
+  }catch{
+    const p = (url || "").split("/").filter(Boolean);
+    return p.length ? p[p.length - 1] : "";
+  }
+}
+
+function setImgLabel(){
+  const b = selectedImageFile ? selectedImageFile : "(none)";
+  currentImageLabel.textContent = "image: " + b;
+}
+
+function applyScale() {
+  document.documentElement.style.setProperty("--imgScale", imgScale.toFixed(2));
+  localStorage.setItem(STORAGE_SCALE_KEY, String(imgScale));
+  updateImgInfoSoon();
+}
+
+let infoTimer = null;
+function updateImgInfoSoon(){
+  if (infoTimer) clearTimeout(infoTimer);
+  infoTimer = setTimeout(updateImgInfo, 60);
+}
+function updateImgInfo(){
+  if (!mapImg.complete || mapImg.naturalWidth === 0) {
+    imgInfo.textContent = `scale:${imgScale.toFixed(2)} / size:----×----`;
+    return;
+  }
+  const r = mapImg.getBoundingClientRect();
+  imgInfo.textContent = `scale:${imgScale.toFixed(2)} / size:${Math.round(r.width)}×${Math.round(r.height)}px`;
+}
+
+/* =========================================================
+  Grid Labels（Timer寄せ）
+========================================================= */
+function buildGridLabels(step = 30) {
   const box = document.getElementById("gridLabels");
   if (!box) return;
   box.innerHTML = "";
 
-  const w = mapEl.clientWidth;
-  const h = mapEl.clientHeight;
+  const w = mapArea.clientWidth;
+  const h = mapArea.clientHeight;
 
   const cols = Math.floor(w / step);
   const rows = Math.floor(h / step);
 
-  for (let col = 1; col < cols; col++){
+  for (let col = 1; col < cols; col++) {
     const d = document.createElement("div");
     d.className = "grid-x";
     d.style.left = `${col * step + step / 2}px`;
     d.style.top  = `${step * 0.25}px`;
-    d.textContent = String.fromCharCode(65 + (col - 1));
+    const idx = col - 1;
+    d.textContent = String.fromCharCode(65 + (idx % 26));
     box.appendChild(d);
   }
 
-  for (let row = 1; row < rows; row++){
+  for (let row = 1; row < rows; row++) {
     const d = document.createElement("div");
     d.className = "grid-y";
     d.style.left = `${step * 0.25}px`;
@@ -361,85 +637,15 @@ function buildGridLabels(step = 30){
   }
 }
 
-/* ===== mapImg.src からファイル名抜き ===== */
-function getFilenameFromSrc(src){
-  try{
-    const u = new URL(src, location.href);
-    const name = (u.pathname.split("/").pop() || "");
-    return decodeURIComponent(name);
-  }catch{
-    const s = (src || "").split("?")[0].split("#")[0];
-    return (s.split("/").pop() || "");
-  }
-}
-function baseNameNoExt(filename){
-  const f = (filename || "").trim();
-  if (!f) return "field";
-  const dot = f.lastIndexOf(".");
-  const base = (dot > 0) ? f.slice(0, dot) : f;
-  return base.replace(/\s+/g, "_").replace(/[^\w\-]/g, "_") || "field";
-}
+/* =========================================================
+  Pins
+========================================================= */
+function renderPins() {
+  const r = mapArea.getBoundingClientRect();
+  const w = Math.max(1, r.width);
+  const h = Math.max(1, r.height);
 
-/* ===== 画像表示 ===== */
-function setMapImage(){
-  if (MAP_IMAGE_URL && MAP_IMAGE_URL.trim()){
-    mapImg.src = MAP_IMAGE_URL;
-    mapImg.style.display = "block";
-    noImg.style.display = "none";
-  } else {
-    mapImg.style.display = "none";
-    noImg.style.display = "grid";
-  }
-}
-
-/* ===== スケール適用 ===== */
-function applyScale(){
-  document.documentElement.style.setProperty("--imgScale", imgScale.toFixed(2));
-  updateImgInfoSoon();
-}
-
-/* ===== 画像サイズ情報 ===== */
-let infoTimer = null;
-function updateImgInfoSoon(){
-  if (infoTimer) clearTimeout(infoTimer);
-  infoTimer = setTimeout(updateImgInfo, 60);
-}
-function updateImgInfo(){
-  if (!mapImg.complete || mapImg.naturalWidth === 0){
-    imgInfo.textContent = `scale:${imgScale.toFixed(2)} / size:----×----`;
-    return;
-  }
-  const r = mapImg.getBoundingClientRect();
-  imgInfo.textContent = `scale:${imgScale.toFixed(2)} / size:${Math.round(r.width)}×${Math.round(r.height)}px`;
-}
-
-/* ===== ピン初期配置 ===== */
-function centerPins(){
-  const w = mapEl.clientWidth;
-  const h = mapEl.clientHeight;
-  const cx = w / 2;
-  const cy = h / 2;
-
-  const offsets = [
-    {dx:-60, dy:-60},
-    {dx: 60, dy:-60},
-    {dx: 60, dy: 60},
-    {dx:-60, dy: 60},
-  ];
-
-  offsets.forEach((o, i) => {
-    pinXY[i].x = clamp(cx + o.dx, 0, w);
-    pinXY[i].y = clamp(cy + o.dy, 0, h);
-  });
-
-  renderPins();
-}
-
-function renderPins(){
-  const w = Math.max(1, mapEl.clientWidth);
-  const h = Math.max(1, mapEl.clientHeight);
-
-  for (let i=0;i<4;i++){
+  for (let i = 0; i < 4; i++) {
     pinXY[i].x = clamp(pinXY[i].x, 0, w);
     pinXY[i].y = clamp(pinXY[i].y, 0, h);
     pinNorm[i].nx = pinXY[i].x / w;
@@ -452,12 +658,33 @@ function renderPins(){
     pin.style.top  = `${pinXY[id].y}px`;
   });
 
+  localStorage.setItem(STORAGE_PINS_KEY, JSON.stringify(pinNorm));
   renderPanel();
 }
 
-function renderPanel(){
+function centerPins() {
+  const r = mapArea.getBoundingClientRect();
+  const cx = r.width / 2;
+  const cy = r.height / 2;
+
+  const offsets = [
+    {dx: -60, dy: -60},
+    {dx:  60, dy: -60},
+    {dx:  60, dy:  60},
+    {dx: -60, dy:  60},
+  ];
+
+  offsets.forEach((o, i) => {
+    pinXY[i].x = clamp(cx + o.dx, 0, r.width);
+    pinXY[i].y = clamp(cy + o.dy, 0, r.height);
+  });
+
+  renderPins();
+}
+
+function renderPanel() {
   const lines = [];
-  for (let i=0;i<4;i++){
+  for (let i = 0; i < 4; i++) {
     const xy = pinXY[i];
     const ll = anchorLatLon[i];
     const llText =
@@ -476,10 +703,9 @@ function renderPanel(){
   panel.innerHTML = lines.join("");
 }
 
-/* ===== ドラッグ ===== */
 let draggingId = null;
-function pointerToLocalXY(e){
-  const r = mapEl.getBoundingClientRect();
+function pointerToLocalXY(e) {
+  const r = mapArea.getBoundingClientRect();
   const x = e.clientX - r.left;
   const y = e.clientY - r.top;
   return { x: clamp(x, 0, r.width), y: clamp(y, 0, r.height) };
@@ -502,7 +728,7 @@ pins.forEach(pin => {
 
   pin.addEventListener("pointerup", (e) => {
     draggingId = null;
-    try{ pin.releasePointerCapture(e.pointerId); }catch{}
+    try { pin.releasePointerCapture(e.pointerId); } catch {}
   });
 
   pin.addEventListener("pointercancel", () => {
@@ -510,17 +736,9 @@ pins.forEach(pin => {
   });
 });
 
-/* ===== コピー ===== */
-async function copyText(text){
-  try{
-    await navigator.clipboard.writeText(text);
-    alert("コピーした:\n\n" + text);
-  }catch{
-    prompt("コピーして:", text);
-  }
-}
-
-/* ===== lat/lon 入力同期＆保存 ===== */
+/* =========================================================
+  lat/lon 入力同期＆保存
+========================================================= */
 function parseMaybeNumber(str){
   const s = (str ?? "").toString().trim();
   if (s === "") return null;
@@ -528,72 +746,171 @@ function parseMaybeNumber(str){
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
+
 function saveAnchors(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(anchorLatLon));
+  const data = anchorLatLon.map(a => ({ lat: a.lat, lon: a.lon }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
+
 function loadAnchors(){
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return;
   try{
     const data = JSON.parse(raw);
     if (!Array.isArray(data) || data.length !== 4) return;
-    for (let i=0;i<4;i++){
+    for(let i=0;i<4;i++){
       anchorLatLon[i].lat = (typeof data[i].lat === "number") ? data[i].lat : null;
       anchorLatLon[i].lon = (typeof data[i].lon === "number") ? data[i].lon : null;
     }
   }catch{}
 }
+
 function syncAnchorsToInputs(){
-  for (let i=0;i<4;i++){
+  for(let i=0;i<4;i++){
     latInputs[i].value = anchorLatLon[i].lat == null ? "" : anchorLatLon[i].lat.toFixed(6);
     lonInputs[i].value = anchorLatLon[i].lon == null ? "" : anchorLatLon[i].lon.toFixed(6);
   }
 }
+
 function onAnchorInputChanged(i){
-  anchorLatLon[i].lat = parseMaybeNumber(latInputs[i].value);
-  anchorLatLon[i].lon = parseMaybeNumber(lonInputs[i].value);
+  const lat = parseMaybeNumber(latInputs[i].value);
+  const lon = parseMaybeNumber(lonInputs[i].value);
+  anchorLatLon[i].lat = lat;
+  anchorLatLon[i].lon = lon;
   saveAnchors();
   renderPanel();
 }
+
 latInputs.forEach((inp, i) => inp.addEventListener("input", () => onAnchorInputChanged(i)));
 lonInputs.forEach((inp, i) => inp.addEventListener("input", () => onAnchorInputChanged(i)));
 
-/* ===== JSON自動生成 ===== */
-function buildFieldJson(){
-  const filename = getFilenameFromSrc(mapImg.src || MAP_IMAGE_URL || "");
-  const base = baseNameNoExt(filename);
+/* =========================================================
+  画像選択（maps/manifest.json）
+========================================================= */
+function openImgPicker(){
+  imgPickerModal.style.display = "block";
+  imgPickerModal.setAttribute("aria-hidden","false");
+  loadManifestAndRender();
+}
+function closeImgPicker(){
+  imgPickerModal.style.display = "none";
+  imgPickerModal.setAttribute("aria-hidden","true");
+}
+openImgPickerBtn.addEventListener("click", openImgPicker);
+imgPickerBack.addEventListener("click", closeImgPicker);
+imgPickerClose.addEventListener("click", closeImgPicker);
+imgPickerModal.addEventListener("click", (e) => {
+  if (e.target === imgPickerModal) closeImgPicker();
+});
 
-  const imagePath = filename ? `assets/${filename}` : "assets/your_image.jpg";
+async function loadManifestAndRender(){
+  imgPickerList.innerHTML = `<div class="badge">読み込み中…</div>`;
+  try{
+    const res = await fetch(MANIFEST_URL, { cache: "no-store" });
+    if(!res.ok) throw new Error("manifest not found");
+    const list = await res.json();
+    if(!Array.isArray(list)) throw new Error("manifest is not array");
+    renderManifestList(list);
+  }catch(e){
+    console.error(e);
+    imgPickerList.innerHTML = `
+      <div class="warn">
+        maps/manifest.json が読めない or 形式が違う。<br>
+        例）["oasis.jpg","forest.png"]<br>
+        置き場所：${MANIFEST_URL}
+      </div>
+    `;
+  }
+}
+
+function renderManifestList(list){
+  if(list.length === 0){
+    imgPickerList.innerHTML = `<div class="warn">manifestは空っぽ。mapsに画像を入れてmanifestに追記して。</div>`;
+    return;
+  }
+  imgPickerList.innerHTML = "";
+  list.forEach(file => {
+    const name = String(file || "").trim();
+    if(!name) return;
+
+    const row = document.createElement("div");
+    row.className = "imgItem";
+
+    const left = document.createElement("div");
+    left.className = "imgName";
+    left.textContent = name;
+
+    const btn = document.createElement("button");
+    btn.className = "imgUseBtn";
+    btn.type = "button";
+    btn.textContent = "この画像";
+    btn.addEventListener("click", () => {
+      setMapImageFromFile(name);
+      closeImgPicker();
+    });
+
+    row.appendChild(left);
+    row.appendChild(btn);
+    imgPickerList.appendChild(row);
+  });
+}
+
+function setMapImageFromFile(file){
+  selectedImageFile = file;
+  localStorage.setItem(STORAGE_IMG_KEY, selectedImageFile);
+
+  mapImg.src = MAPS_DIR + selectedImageFile;
+  mapImg.style.display = "block";
+  noImg.style.display = "none";
+  setImgLabel();
+
+  // field id を空なら、ファイル名から自動生成（拡張子除外）
+  if(!fieldIdInput.value.trim()){
+    const stem = selectedImageFile.replace(/\.[^.]+$/,"");
+    fieldIdInput.value = stem;
+  }
+}
+
+/* =========================================================
+  JSON出力（1発コピー）
+========================================================= */
+function buildFieldJson(){
+  // image は mapImg.src からファイル名を抜いて maps/ を付ける（要求どおり）
+  const fileFromSrc = basenameFromUrl(mapImg.src);
+  const imagePath = fileFromSrc ? (MAPS_DIR + fileFromSrc) : "";
+
+  const id = (fieldIdInput.value || "").trim() || (fileFromSrc ? fileFromSrc.replace(/\.[^.]+$/,"") : "field");
+  const name = id;
 
   const anchors = [0,1,2,3].map(i => ({
     label: `P${i}`,
     x: Number(pinXY[i].x.toFixed(1)),
     y: Number(pinXY[i].y.toFixed(1)),
-    lat: anchorLatLon[i].lat,
-    lon: anchorLatLon[i].lon
+    lat: (anchorLatLon[i].lat == null) ? null : Number(anchorLatLon[i].lat.toFixed(6)),
+    lon: (anchorLatLon[i].lon == null) ? null : Number(anchorLatLon[i].lon.toFixed(6)),
   }));
 
-  return {
-    id: base,
-    name: base,
-    image: imagePath,
+  const obj = {
+    id,
+    name,
+    image: imagePath || (selectedImageFile ? (MAPS_DIR + selectedImageFile) : ""),
     defaultImgScale: Number(imgScale.toFixed(2)),
     anchors
   };
+
+  lastExportJsonText = JSON.stringify(obj, null, 2);
+  exportPreview.textContent = lastExportJsonText;
 }
 
-function validateFieldJson(obj){
-  const missing = obj.anchors
-    .map((a,i) => (a.lat == null || a.lon == null) ? `P${i}` : null)
-    .filter(Boolean);
+buildJsonBtn.addEventListener("click", buildFieldJson);
+copyJsonBtn.addEventListener("click", () => {
+  if(!lastExportJsonText) buildFieldJson();
+  copyText(lastExportJsonText);
+});
 
-  if (missing.length){
-    return `lat/lon 未設定: ${missing.join(", ")}\n（JSONは出せるけど、Timerで位置が出ない）`;
-  }
-  return null;
-}
-
-/* ===== ボタン類 ===== */
+/* =========================================================
+  ボタン類
+========================================================= */
 document.getElementById("imgMinus").addEventListener("click", () => {
   imgScale = clamp(imgScale - SCALE_STEP, SCALE_MIN, SCALE_MAX);
   applyScale();
@@ -608,10 +925,11 @@ document.getElementById("imgReset").addEventListener("click", () => {
 });
 
 document.getElementById("copyImgInfo").addEventListener("click", () => {
+  const fileFromSrc = basenameFromUrl(mapImg.src);
   const text =
-    imgInfo.textContent
-    + `\nmapImg.src="${mapImg.src || MAP_IMAGE_URL}"`
-    + `\ndefaultImgScale=${imgScale.toFixed(2)}`;
+    imgInfo.textContent +
+    `\nimage="${fileFromSrc ? (MAPS_DIR + fileFromSrc) : "(none)"}"` +
+    `\ndefaultImgScale=${imgScale.toFixed(2)}`;
   copyText(text);
 });
 
@@ -625,38 +943,43 @@ document.getElementById("copyAnchorsBtn").addEventListener("click", () => {
 });
 
 document.getElementById("clearAnchorsBtn").addEventListener("click", () => {
-  for (let i=0;i<4;i++){
-    anchorLatLon[i].lat = null;
-    anchorLatLon[i].lon = null;
-  }
+  for(let i=0;i<4;i++){ anchorLatLon[i].lat = null; anchorLatLon[i].lon = null; }
   saveAnchors();
   syncAnchorsToInputs();
   renderPanel();
 });
 
-document.getElementById("copyFieldJsonBtn").addEventListener("click", () => {
-  const obj = buildFieldJson();
-  const warn = validateFieldJson(obj);
-  const jsonText = JSON.stringify(obj, null, 2);
-
-  if (warn){
-    const ok = confirm(warn + "\n\nそれでもJSONをコピーする？");
-    if (!ok) return;
-  }
-  copyText(jsonText);
-});
-
 document.getElementById("resetPinsBtn").addEventListener("click", centerPins);
 document.getElementById("copyPinsBtn").addEventListener("click", () => {
-  const text = pinXY.map((p,i) => `P${i}: x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)}`).join("\n");
+  const text = pinXY.map((p, i) => `P${i}: x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)}`).join("\n");
   copyText(text);
 });
 
-/* ===== リサイズ対策（ピンを比率から復元） ===== */
+/* =========================================================
+  起動
+========================================================= */
+function loadPinsNorm(){
+  const raw = localStorage.getItem(STORAGE_PINS_KEY);
+  if(!raw) return false;
+  try{
+    const data = JSON.parse(raw);
+    if(!Array.isArray(data) || data.length !== 4) return false;
+    for(let i=0;i<4;i++){
+      const nx = Number(data[i].nx);
+      const ny = Number(data[i].ny);
+      if(!Number.isFinite(nx) || !Number.isFinite(ny)) return false;
+      pinNorm[i].nx = clamp(nx, 0, 1);
+      pinNorm[i].ny = clamp(ny, 0, 1);
+    }
+    return true;
+  }catch{ return false; }
+}
+
 function restorePinsFromNorm(){
-  const w = Math.max(1, mapEl.clientWidth);
-  const h = Math.max(1, mapEl.clientHeight);
-  for (let i=0;i<4;i++){
+  const r = mapArea.getBoundingClientRect();
+  const w = Math.max(1, r.width);
+  const h = Math.max(1, r.height);
+  for(let i=0;i<4;i++){
     pinXY[i].x = clamp(pinNorm[i].nx * w, 0, w);
     pinXY[i].y = clamp(pinNorm[i].ny * h, 0, h);
   }
@@ -668,23 +991,57 @@ function restorePinsFromNorm(){
   renderPanel();
 }
 
-/* ===== 初期化 ===== */
-loadAnchors();
-syncAnchorsToInputs();
+(function init(){
+  // anchors
+  loadAnchors();
+  syncAnchorsToInputs();
 
-setMapImage();
-applyScale();
-centerPins();
+  // scale
+  const savedScale = Number(localStorage.getItem(STORAGE_SCALE_KEY));
+  imgScale = Number.isFinite(savedScale) ? clamp(savedScale, SCALE_MIN, SCALE_MAX) : DEFAULT_IMG_SCALE;
+  applyScale();
 
-mapImg.addEventListener("load", () => updateImgInfoSoon());
+  // image
+  const savedImg = (localStorage.getItem(STORAGE_IMG_KEY) || "").trim();
+  if(savedImg){
+    setMapImageFromFile(savedImg);
+  }else{
+    mapImg.style.display = "none";
+    noImg.style.display = "grid";
+    setImgLabel();
+  }
 
-window.addEventListener("resize", () => {
-  buildGridLabels(30);
+  // grid labels
+  requestAnimationFrame(() => buildGridLabels(30));
+
+  // pins
+  const hasNorm = loadPinsNorm();
+  if(hasNorm){
+    requestAnimationFrame(() => {
+      restorePinsFromNorm();
+      renderPins(); // norm更新＆保存
+    });
+  }else{
+    requestAnimationFrame(() => centerPins());
+  }
+
   updateImgInfoSoon();
-  restorePinsFromNorm();
+})();
+
+mapImg.addEventListener("load", () => {
+  updateImgInfoSoon();
+  // srcからファイル名を確定してラベル更新（要求の「srcから抜く」用）
+  const f = basenameFromUrl(mapImg.src);
+  if(f) selectedImageFile = f;
+  setImgLabel();
 });
 
-requestAnimationFrame(() => buildGridLabels(30));
+window.addEventListener("resize", () => {
+  updateImgInfoSoon();
+  buildGridLabels(30);
+  // 比率から復元（リセットしない）
+  restorePinsFromNorm();
+});
 </script>
 </body>
 </html>
