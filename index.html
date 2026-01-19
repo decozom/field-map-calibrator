@@ -885,13 +885,17 @@ function buildFieldJson(){
   const id = (fieldIdInput.value || "").trim() || (fileFromSrc ? fileFromSrc.replace(/\.[^.]+$/,"") : "field");
   const name = id;
 
-  const anchors = [0,1,2,3].map(i => ({
-    label: `P${i}`,
-    x: Number(pinXY[i].x.toFixed(1)),
-    y: Number(pinXY[i].y.toFixed(1)),
-    lat: (anchorLatLon[i].lat == null) ? null : Number(anchorLatLon[i].lat.toFixed(6)),
-    lon: (anchorLatLon[i].lon == null) ? null : Number(anchorLatLon[i].lon.toFixed(6)),
-  }));
+const r = mapArea.getBoundingClientRect();
+const w = Math.max(1, r.width);
+const h = Math.max(1, r.height);
+
+const anchors = [0,1,2,3].map(i => ({
+  label: `P${i}`,
+  nx: Number((pinXY[i].x / w).toFixed(6)),
+  ny: Number((pinXY[i].y / h).toFixed(6)),
+  lat: (anchorLatLon[i].lat == null) ? null : Number(anchorLatLon[i].lat.toFixed(6)),
+  lon: (anchorLatLon[i].lon == null) ? null : Number(anchorLatLon[i].lon.toFixed(6)),
+}));
 
   const obj = {
     id,
