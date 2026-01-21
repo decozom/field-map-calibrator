@@ -771,7 +771,7 @@ pins.forEach(pin => {
 
   pin.addEventListener("pointermove", (e) => {
     if (draggingId === null) return;
-    const {x, y} = pointerToLocalXY(e);
+    const {x, y} = pointerToImageXY(e);
     pinXY[draggingId].x = x;
     pinXY[draggingId].y = y;
     renderPins();
