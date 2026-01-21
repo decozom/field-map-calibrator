@@ -570,6 +570,32 @@ async function copyText(text) {
   }
 }
 
+function getDisplayedImageRect(){
+  const area = mapArea.getBoundingClientRect();
+  const w = Math.max(1, area.width);
+  const h = Math.max(1, area.height);
+
+  // 画像未ロード時は「枠いっぱい」を仮扱い
+  const natW = mapImg.naturalWidth || w;
+  const natH = mapImg.naturalHeight || h;
+
+  // object-fit: contain の基本スケール
+  const fit = Math.min(w / natW, h / natH);
+
+  // さらにユーザーの imgScale を掛ける（transform: scale）
+  const s = fit * imgScale;
+
+  const iw = natW * s;
+  const ih = natH * s;
+
+  // 中央配置（object-position: center）
+  const ox = (w - iw) / 2;
+  const oy = (h - ih) / 2;
+
+  // mapArea 内座標系（左上が 0,0）
+  return { ox, oy, iw, ih, areaW: w, areaH: h };
+}
+
 function basenameFromUrl(url){
   try{
     const u = new URL(url, location.href);
@@ -644,21 +670,25 @@ function buildGridLabels(step = 30) {
   Pins
 ========================================================= */
 function renderPins() {
-  const r = mapArea.getBoundingClientRect();
-  const w = Math.max(1, r.width);
-  const h = Math.max(1, r.height);
+  const rect = getDisplayedImageRect();
+  const iw = Math.max(1, rect.iw);
+  const ih = Math.max(1, rect.ih);
 
+  // pinXY は画像内ピクセル座標（0..iw, 0..ih）
   for (let i = 0; i < 4; i++) {
-    pinXY[i].x = clamp(pinXY[i].x, 0, w);
-    pinXY[i].y = clamp(pinXY[i].y, 0, h);
-    pinNorm[i].nx = pinXY[i].x / w;
-    pinNorm[i].ny = pinXY[i].y / h;
+    pinXY[i].x = clamp(pinXY[i].x, 0, iw);
+    pinXY[i].y = clamp(pinXY[i].y, 0, ih);
+
+    //保存するのは画像基準の比率
+    pinNorm[i].nx = pinXY[i].x / iw;
+    pinNorm[i].ny = pinXY[i].y / ih;
   }
 
+  // 表示は mapArea 座標へ変換して配置（画像左上オフセットを足す）
   pins.forEach(pin => {
     const id = Number(pin.dataset.id);
-    pin.style.left = `${pinXY[id].x}px`;
-    pin.style.top  = `${pinXY[id].y}px`;
+    pin.style.left = `${rect.ox + pinXY[id].x}px`;
+    pin.style.top  = `${rect.oy + pinXY[id].y}px`;
   });
 
   localStorage.setItem(STORAGE_PINS_KEY, JSON.stringify(pinNorm));
@@ -666,20 +696,27 @@ function renderPins() {
 }
 
 function centerPins() {
-  const r = mapArea.getBoundingClientRect();
-  const cx = r.width / 2;
-  const cy = r.height / 2;
+  const rect = getDisplayedImageRect();
+  const iw = Math.max(1, rect.iw);
+  const ih = Math.max(1, rect.ih);
+
+  const cx = iw / 2;
+  const cy = ih / 2;
+
+  // 画像サイズに応じてオフセットも調整（小さい画像でも破綻しにくい）
+  const dx = Math.min(60, iw * 0.18);
+  const dy = Math.min(60, ih * 0.18);
 
   const offsets = [
-    {dx: -60, dy: -60},
-    {dx:  60, dy: -60},
-    {dx:  60, dy:  60},
-    {dx: -60, dy:  60},
+    {dx: -dx, dy: -dy},
+    {dx:  dx, dy: -dy},
+    {dx:  dx, dy:  dy},
+    {dx: -dx, dy:  dy},
   ];
 
   offsets.forEach((o, i) => {
-    pinXY[i].x = clamp(cx + o.dx, 0, r.width);
-    pinXY[i].y = clamp(cy + o.dy, 0, r.height);
+    pinXY[i].x = clamp(cx + o.dx, 0, iw);
+    pinXY[i].y = clamp(cy + o.dy, 0, ih);
   });
 
   renderPins();
@@ -707,11 +744,22 @@ function renderPanel() {
 }
 
 let draggingId = null;
-function pointerToLocalXY(e) {
-  const r = mapArea.getBoundingClientRect();
-  const x = e.clientX - r.left;
-  const y = e.clientY - r.top;
-  return { x: clamp(x, 0, r.width), y: clamp(y, 0, r.height) };
+function pointerToImageXY(e) {
+  const area = mapArea.getBoundingClientRect();
+  const mx = e.clientX - area.left;
+  const my = e.clientY - area.top;
+
+  const rect = getDisplayedImageRect();
+
+  // 画像内座標に変換（画像左上を 0,0）
+  const ix = mx - rect.ox;
+  const iy = my - rect.oy;
+
+  // 画像の表示範囲にクランプ
+  return {
+    x: clamp(ix, 0, rect.iw),
+    y: clamp(iy, 0, rect.ih),
+  };
 }
 
 pins.forEach(pin => {
@@ -983,19 +1031,17 @@ function loadPinsNorm(){
 }
 
 function restorePinsFromNorm(){
-  const r = mapArea.getBoundingClientRect();
-  const w = Math.max(1, r.width);
-  const h = Math.max(1, r.height);
+  const rect = getDisplayedImageRect();
+  const iw = Math.max(1, rect.iw);
+  const ih = Math.max(1, rect.ih);
+
   for(let i=0;i<4;i++){
-    pinXY[i].x = clamp(pinNorm[i].nx * w, 0, w);
-    pinXY[i].y = clamp(pinNorm[i].ny * h, 0, h);
+    pinXY[i].x = clamp(pinNorm[i].nx * iw, 0, iw);
+    pinXY[i].y = clamp(pinNorm[i].ny * ih, 0, ih);
   }
-  pins.forEach(pin => {
-    const id = Number(pin.dataset.id);
-    pin.style.left = `${pinXY[id].x}px`;
-    pin.style.top  = `${pinXY[id].y}px`;
-  });
-  renderPanel();
+
+  // 配置は renderPins() に任せる（保存も更新される）
+  renderPins();
 }
 
 (function init(){
